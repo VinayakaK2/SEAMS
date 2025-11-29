@@ -3,10 +3,22 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d',
-    });
+const generateToken = (user) => {
+    return jwt.sign(
+        {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            usn: user.usn,
+            branch: user.branch,
+            semester: user.semester
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: '30d',
+        }
+    );
 };
 
 // @desc    Auth user & get token
@@ -29,7 +41,10 @@ const loginUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
-            token: generateToken(user._id),
+            usn: user.usn,
+            branch: user.branch,
+            semester: user.semester,
+            token: generateToken(user),
         });
     } else {
         res.status(401).json({ message: 'Invalid email or password' });

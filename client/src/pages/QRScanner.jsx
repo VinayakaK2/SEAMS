@@ -1,124 +1,138 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import axios from 'axios';
+import AuthContext from '../context/AuthContext';
+import StudentLayout from '../components/StudentLayout';
+import { Camera, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
 const QRScanner = () => {
+    const { user } = useContext(AuthContext);
     const [scanResult, setScanResult] = useState(null);
-    const [manualCode, setManualCode] = useState('');
     const [message, setMessage] = useState('');
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [scanner, setScanner] = useState(null);
 
     useEffect(() => {
-        const scanner = new Html5QrcodeScanner(
+        // Initialize scanner
+        const html5QrcodeScanner = new Html5QrcodeScanner(
             "reader",
             { fps: 10, qrbox: { width: 250, height: 250 } },
-      /* verbose= */ false
+            /* verbose= */ false
         );
 
-        scanner.render(onScanSuccess, onScanFailure);
-
-        function onScanSuccess(decodedText, decodedResult) {
-            setScanResult(decodedText);
-            verifyAttendance(decodedText);
-            scanner.clear();
-        }
-
-        function onScanFailure(error) {
-            // handle scan failure, usually better to ignore and keep scanning.
-        }
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        setScanner(html5QrcodeScanner);
 
         return () => {
-            scanner.clear().catch(error => console.error("Failed to clear scanner. ", error));
+            html5QrcodeScanner.clear().catch(error => console.error("Failed to clear scanner", error));
         };
     }, []);
 
-    const verifyAttendance = async (qrToken) => {
+    const onScanSuccess = async (decodedText, decodedResult) => {
+        if (scanResult) return; // Prevent multiple scans
+
+        setScanResult(decodedText);
+
+        // Stop scanning temporarily
+        if (scanner) {
+            scanner.pause();
+        }
+
         try {
             const token = localStorage.getItem('token');
-            // We need studentId. In a real scenario, the student scans their ID, or the coordinator scans the student's QR?
-            // The requirement says "QR Attendance Scanner Page".
-            // Usually: Event has a QR, Student scans it -> Student gets credit.
-            // OR: Student has a QR, Coordinator scans it -> Student gets credit.
-            // The user said: "Generate unique time-bound QR code (valid during event)" (Coordinator creates event).
-            // So Coordinator generates QR for Event. Student scans it.
-            // Wait, "Verify participation: Table with student name... scan timestamp... Approve/Reject".
-            // This implies Coordinator verifies.
-            // "QR Attendance Scanner Page (mobile friendly)" - likely for students to scan the event QR?
-            // OR Coordinator scans Student QR?
-            // "Generate unique time-bound QR code (valid during event)" -> This is for the Event.
-            // So the Event has a QR code.
-            // Students scan it to mark their attendance?
-            // If Student scans Event QR, then Student's phone sends request "I am at Event X".
-            // Then Coordinator sees "Student Y claims to be at Event X" and approves?
-            // OR if the QR is time-bound and unique, maybe scanning it IS the verification?
+            // Assuming the QR code contains the event ID or a specific verification URL
+            // If decodedText is a URL, extract ID, otherwise assume it's the ID
+            // For this system, let's assume QR contains: { "eventId": "...", "type": "attendance" } or just eventId
 
-            // Let's assume: Coordinator projects Event QR. Student scans it.
-            // Student's app sends: POST /api/registrations/verify { qrToken: "event-token" }
-            // But `verifyAttendance` controller I wrote expects `studentId` and `qrToken`.
-            // And it says `access Private (Coordinator, Faculty)`.
-            // So my controller was designed for Coordinator scanning Student?
-            // "Verify participation: Table with student name...".
+            let eventId = decodedText;
+            try {
+                const parsed = JSON.parse(decodedText);
+                if (parsed.eventId) eventId = parsed.eventId;
+            } catch (e) {
+                // Not JSON, treat as raw string ID
+            }
 
-            // Let's re-read: "Generate unique time-bound QR code (valid during event)" -> Event Coordinator Module.
-            // "QR Attendance Scanner Page (mobile friendly)" -> Student Module.
-            // So Student scans Event QR.
+            const { data } = await axios.post('http://localhost:5000/api/registrations/verify-self',
+                { eventId, qrData: decodedText },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
-            // So I need to update `verifyAttendance` to be accessible by Student?
-            // OR `verifyAttendance` is for Coordinator to manually verify?
-
-            // If Student scans Event QR:
-            // Student sends `qrToken`. Backend verifies token is valid for an event.
-            // Backend marks Student as "attended".
-
-            // I will update `verifyAttendance` to allow Students to self-verify if they scan the valid Event QR.
-            // OR I'll create a new endpoint `markAttendance` for students.
-
-            // Let's use the existing `verifyAttendance` but modify it or create a wrapper.
-            // Actually, if the QR is time-bound and unique to the event, it's safe for students to scan it to prove presence.
-
-            // I'll assume Student scans Event QR.
-
-            const { data } = await axios.post('http://localhost:5000/api/registrations/verify-self', { qrToken }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setMessage(`Success: ${data.message}`);
+            setMessage(data.message || 'Attendance marked successfully!');
+            setIsSuccess(true);
         } catch (error) {
-            setMessage(`Error: ${error.response?.data?.message || 'Verification failed'}`);
+            setMessage(error.response?.data?.message || 'Verification failed. Invalid QR code.');
+            setIsSuccess(false);
         }
     };
 
-    const handleManualSubmit = (e) => {
-        e.preventDefault();
-        verifyAttendance(manualCode);
+    const onScanFailure = (error) => {
+        // console.warn(`Code scan error = ${error}`);
+    };
+
+    const resetScanner = () => {
+        setScanResult(null);
+        setMessage('');
+        setIsSuccess(false);
+        if (scanner) {
+            scanner.resume();
+        } else {
+            window.location.reload(); // Fallback if resume fails
+        }
     };
 
     return (
-        <div className="min-h-screen p-8 bg-gray-50">
-            <div className="max-w-md mx-auto bg-white rounded-lg shadow">
-                <div className="p-6">
-                    <h2 className="mb-4 text-2xl font-bold text-center text-gray-800">Scan Event QR</h2>
-                    <div id="reader" width="300px"></div>
+        <StudentLayout user={user} title="Scan QR Code">
+            <div className="max-w-md mx-auto">
+                <div className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100">
+                    {!scanResult ? (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Camera className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900">Scan Event QR</h3>
+                                <p className="text-gray-500 mt-2">Point your camera at the event QR code to mark your attendance.</p>
+                            </div>
 
-                    <div className="mt-6">
-                        <p className="mb-2 text-center text-gray-600">Or enter code manually:</p>
-                        <form onSubmit={handleManualSubmit} className="flex gap-2">
-                            <input
-                                value={manualCode}
-                                onChange={(e) => setManualCode(e.target.value)}
-                                className="flex-1 px-3 py-2 border rounded"
-                                placeholder="Event Code"
-                            />
-                            <button type="submit" className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">Verify</button>
-                        </form>
-                    </div>
+                            <div className="overflow-hidden rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 relative">
+                                <div id="reader" className="w-full"></div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isSuccess ? 'bg-green-100' : 'bg-red-100'}`}>
+                                {isSuccess ? (
+                                    <CheckCircle className="w-10 h-10 text-green-600" />
+                                ) : (
+                                    <XCircle className="w-10 h-10 text-red-600" />
+                                )}
+                            </div>
 
-                    {message && (
-                        <div className={`mt-4 p-3 rounded text-center ${message.startsWith('Success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {message}
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                {isSuccess ? 'Success!' : 'Failed'}
+                            </h3>
+                            <p className={`text-lg mb-8 ${isSuccess ? 'text-green-600' : 'text-red-600'}`}>
+                                {message}
+                            </p>
+
+                            <button
+                                onClick={resetScanner}
+                                className="w-full py-3 px-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center"
+                            >
+                                <RefreshCw className="w-5 h-5 mr-2" />
+                                Scan Another
+                            </button>
                         </div>
                     )}
                 </div>
+
+                <div className="mt-8 text-center">
+                    <p className="text-sm text-gray-500">
+                        Having trouble? Make sure you have granted camera permissions.
+                    </p>
+                </div>
             </div>
-        </div>
+        </StudentLayout>
     );
 };
 
