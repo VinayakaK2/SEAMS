@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import CoordinatorLayout from '../components/CoordinatorLayout';
-import { Calendar, MapPin, Users, Award, Upload, QrCode as QrCodeIcon, Image } from 'lucide-react';
+import { Calendar, MapPin, Users, Award, Upload, QrCode as QrCodeIcon, Image, Plus, X, Phone, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const CreateEvent = ({ embedded = false }) => {
@@ -12,20 +12,40 @@ const CreateEvent = ({ embedded = false }) => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        date: '',
-        time: '',
+        startDate: '',
+        startTime: '',
+        endDate: '',
+        endTime: '',
         venue: '',
         category: 'Technical',
         points: 0,
         maxParticipants: 0,
     });
+    const [coordinators, setCoordinators] = useState([{ name: '', phone: '' }]);
     const [posterPreview, setPosterPreview] = useState(null);
     const [showQR, setShowQR] = useState(false);
     const [qrValue, setQrValue] = useState('');
     const [success, setSuccess] = useState(false);
 
+
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleCoordinatorChange = (index, field, value) => {
+        const newCoordinators = [...coordinators];
+        newCoordinators[index][field] = value;
+        setCoordinators(newCoordinators);
+    };
+
+    const addCoordinator = () => {
+        setCoordinators([...coordinators, { name: '', phone: '' }]);
+    };
+
+    const removeCoordinator = (index) => {
+        if (coordinators.length > 1) {
+            setCoordinators(coordinators.filter((_, i) => i !== index));
+        }
     };
 
     const handlePosterUpload = (e) => {
@@ -50,11 +70,19 @@ const CreateEvent = ({ embedded = false }) => {
         setShowQR(true);
     };
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/events', formData, {
+            const eventData = {
+                ...formData,
+                // Combine date and time for backward compatibility
+                date: formData.startDate,
+                time: formData.startTime,
+                coordinators: coordinators.filter(c => c.name || c.phone) // Only send non-empty coordinators
+            };
+            await axios.post('http://localhost:5000/api/events', eventData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSuccess(true);
@@ -98,6 +126,7 @@ const CreateEvent = ({ embedded = false }) => {
                             />
                         </div>
 
+
                         {/* Description */}
                         <div className="mb-6">
                             <label className="block mb-2 text-sm font-semibold text-gray-700">Description *</label>
@@ -112,32 +141,126 @@ const CreateEvent = ({ embedded = false }) => {
                             />
                         </div>
 
-                        {/* Date & Time */}
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-gray-400" />
-                                    Date *
-                                </label>
-                                <input
-                                    type="date"
-                                    name="date"
-                                    value={formData.date}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                    required
-                                />
+                        {/* Start Date & Time */}
+                        <div className="mb-6">
+                            <label className="block mb-3 text-sm font-semibold text-gray-700">Event Start *</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block mb-2 text-xs text-gray-500 flex items-center gap-2">
+                                        <Calendar className="w-3 h-3" />
+                                        Start Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        name="startDate"
+                                        value={formData.startDate}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block mb-2 text-xs text-gray-500">Start Time</label>
+                                    <input
+                                        type="time"
+                                        name="startTime"
+                                        value={formData.startTime}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        required
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block mb-2 text-sm font-semibold text-gray-700">Time *</label>
-                                <input
-                                    type="time"
-                                    name="time"
-                                    value={formData.time}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                    required
-                                />
+                        </div>
+
+                        {/* End Date & Time */}
+                        <div className="mb-6">
+                            <label className="block mb-3 text-sm font-semibold text-gray-700">Event End *</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block mb-2 text-xs text-gray-500 flex items-center gap-2">
+                                        <Calendar className="w-3 h-3" />
+                                        End Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        name="endDate"
+                                        value={formData.endDate}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block mb-2 text-xs text-gray-500">End Time</label>
+                                    <input
+                                        type="time"
+                                        name="endTime"
+                                        value={formData.endTime}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Event Coordinators */}
+                        <div className="mb-6">
+                            <div className="flex justify-between items-center mb-3">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <User className="w-4 h-4 text-gray-400" />
+                                    Event Coordinators
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={addCoordinator}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Coordinator
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                {coordinators.map((coordinator, index) => (
+                                    <div key={index} className="flex gap-3 items-start p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                        <div className="flex-1 grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block mb-1 text-xs text-gray-500">Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={coordinator.name}
+                                                    onChange={(e) => handleCoordinatorChange(index, 'name', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                                    placeholder="Coordinator name"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block mb-1 text-xs text-gray-500 flex items-center gap-1">
+                                                    <Phone className="w-3 h-3" />
+                                                    Phone Number
+                                                </label>
+                                                <input
+                                                    type="tel"
+                                                    value={coordinator.phone}
+                                                    onChange={(e) => handleCoordinatorChange(index, 'phone', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                                    placeholder="+91 XXXXX XXXXX"
+                                                />
+                                            </div>
+                                        </div>
+                                        {coordinators.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeCoordinator(index)}
+                                                className="mt-6 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Remove coordinator"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 

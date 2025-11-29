@@ -1,6 +1,8 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import AuthContext from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
+import axios from 'axios';
 import {
     CheckSquare, XCircle, Eye, Calendar, MapPin, User, Tag,
     Clock, CheckCircle, AlertTriangle
@@ -8,67 +10,81 @@ import {
 
 const EventApprovals = () => {
     const { user } = useContext(AuthContext);
+    const socket = useSocket();
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [pendingEvents, setPendingEvents] = useState([]);
 
-    // Mock Data
-    const [pendingEvents, setPendingEvents] = useState([
-        {
-            id: 1,
-            name: 'AI Workshop 2024',
-            createdBy: 'John Doe (Coordinator)',
-            category: 'Technical',
-            date: '2024-03-15',
-            status: 'Pending',
-            description: 'A comprehensive workshop on Artificial Intelligence and Machine Learning basics.',
-            venue: 'Seminar Hall 1',
-            time: '10:00 AM - 4:00 PM',
-            points: 50,
-            poster: 'https://via.placeholder.com/300x400'
-        },
-        {
-            id: 2,
-            name: 'Cultural Fest Auditions',
-            createdBy: 'Jane Smith (Coordinator)',
-            category: 'Cultural',
-            date: '2024-03-20',
-            status: 'Pending',
-            description: 'Auditions for the upcoming annual cultural fest.',
-            venue: 'Auditorium',
-            time: '2:00 PM - 6:00 PM',
-            points: 30,
-            poster: 'https://via.placeholder.com/300x400'
-        },
-        {
-            id: 3,
-            name: 'Inter-Department Cricket',
-            createdBy: 'Mike Ross (Sports Sec)',
-            category: 'Sports',
-            date: '2024-03-25',
-            status: 'Pending',
-            description: 'Annual cricket tournament between departments.',
-            venue: 'College Ground',
-            time: '9:00 AM Onwards',
-            points: 40,
-            poster: 'https://via.placeholder.com/300x400'
-        },
-    ]);
+    useEffect(() => {
+        fetchPendingEvents();
+    }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('event_created', (newEvent) => {
+            console.log('New event created:', newEvent);
+            if (newEvent.status === 'pending') {
+                setPendingEvents(prev => [newEvent, ...prev]);
+            }
+        });
+
+        socket.on('event_status_updated', (updatedEvent) => {
+            console.log('Event status updated:', updatedEvent);
+            setPendingEvents(prev => prev.filter(e => e._id !== updatedEvent._id));
+        });
+
+        return () => {
+            socket.off('event_created');
+            socket.off('event_status_updated');
+        };
+    }, [socket]);
+
+    const fetchPendingEvents = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const { data } = await axios.get('http://localhost:5000/api/events?status=pending', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setPendingEvents(data);
+        } catch (error) {
+            console.error('Error fetching pending events:', error);
+        }
+    };
 
     const handleViewDetails = (event) => {
         setSelectedEvent(event);
         setIsDrawerOpen(true);
     };
 
-    const handleApprove = (id) => {
-        setPendingEvents(pendingEvents.filter(e => e.id !== id));
-        setIsDrawerOpen(false);
-        // Add API call here
+    const handleApprove = async (id) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(`http://localhost:5000/api/events/${id}/status`,
+                { status: 'approved' },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setPendingEvents(pendingEvents.filter(e => e._id !== id));
+            setIsDrawerOpen(false);
+        } catch (error) {
+            console.error('Error approving event:', error);
+            alert('Failed to approve event');
+        }
     };
 
-    const handleReject = (id) => {
-        setPendingEvents(pendingEvents.filter(e => e.id !== id));
-        setIsDrawerOpen(false);
-        // Add API call here
+    const handleReject = async (id) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(`http://localhost:5000/api/events/${id}/status`,
+                { status: 'rejected' },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setPendingEvents(pendingEvents.filter(e => e._id !== id));
+            setIsDrawerOpen(false);
+        } catch (error) {
+            console.error('Error rejecting event:', error);
+            alert('Failed to reject event');
+        }
     };
 
     return (
@@ -101,15 +117,15 @@ const EventApprovals = () => {
                         </thead>
                         <tbody>
                             {pendingEvents.map((event) => (
-                                <tr key={event.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                    <td className="py-4 px-6 font-medium text-gray-900">{event.name}</td>
-                                    <td className="py-4 px-6 text-sm text-gray-600">{event.createdBy}</td>
+                                <tr key={event._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                    <td className="py-4 px-6 font-medium text-gray-900">{event.title}</td>
+                                    <td className="py-4 px-6 text-sm text-gray-600">{event.organizer?.name || 'Unknown'}</td>
                                     <td className="py-4 px-6">
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                                             {event.category}
                                         </span>
                                     </td>
-                                    <td className="py-4 px-6 text-sm text-gray-600">{event.date}</td>
+                                    <td className="py-4 px-6 text-sm text-gray-600">{new Date(event.date).toLocaleDateString()}</td>
                                     <td className="py-4 px-6">
                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-100">
                                             <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span>
@@ -126,14 +142,14 @@ const EventApprovals = () => {
                                                 <Eye className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => handleApprove(event.id)}
+                                                onClick={() => handleApprove(event._id)}
                                                 className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                 title="Approve"
                                             >
                                                 <CheckCircle className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => handleReject(event.id)}
+                                                onClick={() => handleReject(event._id)}
                                                 className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                 title="Reject"
                                             >
@@ -166,14 +182,14 @@ const EventApprovals = () => {
 
                             <div className="space-y-6">
                                 <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
-                                    <img src={selectedEvent.poster} alt="Event Poster" className="w-full h-full object-cover" />
+                                    <img src={selectedEvent.poster || 'https://via.placeholder.com/300x400'} alt="Event Poster" className="w-full h-full object-cover" />
                                 </div>
 
                                 <div>
                                     <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full mb-2">
                                         {selectedEvent.category}
                                     </span>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedEvent.name}</h2>
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedEvent.title}</h2>
                                     <p className="text-gray-600 text-sm leading-relaxed">{selectedEvent.description}</p>
                                 </div>
 
@@ -182,7 +198,7 @@ const EventApprovals = () => {
                                         <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
                                             <Calendar className="w-3 h-3" /> Date
                                         </div>
-                                        <p className="font-semibold text-gray-900">{selectedEvent.date}</p>
+                                        <p className="font-semibold text-gray-900">{new Date(selectedEvent.date).toLocaleDateString()}</p>
                                     </div>
                                     <div className="p-4 bg-gray-50 rounded-xl">
                                         <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
@@ -210,19 +226,19 @@ const EventApprovals = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Organized by</p>
-                                        <p className="font-semibold text-gray-900">{selectedEvent.createdBy}</p>
+                                        <p className="font-semibold text-gray-900">{selectedEvent.organizer?.name || 'Unknown'}</p>
                                     </div>
                                 </div>
 
                                 <div className="flex gap-3 pt-4 border-t border-gray-100">
                                     <button
-                                        onClick={() => handleReject(selectedEvent.id)}
+                                        onClick={() => handleReject(selectedEvent._id)}
                                         className="flex-1 py-3 border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors"
                                     >
                                         Reject
                                     </button>
                                     <button
-                                        onClick={() => handleApprove(selectedEvent.id)}
+                                        onClick={() => handleApprove(selectedEvent._id)}
                                         className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-200"
                                     >
                                         Approve Event

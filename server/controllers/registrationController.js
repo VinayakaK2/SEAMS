@@ -35,6 +35,26 @@ const registerForEvent = async (req, res) => {
 
         await logActivity('REGISTER_EVENT', studentId, registration._id, 'Registration', { event: event.title }, req);
 
+        // Emit socket event to event organizer and admins
+        if (req.io) {
+            const populatedReg = await Registration.findById(registration._id).populate('student', 'name email usn');
+            const updatePayload = {
+                event: {
+                    _id: event._id,
+                    title: event.title,
+                    registeredCount: event.registeredCount
+                },
+                registration: populatedReg,
+                participantCount: event.registeredCount
+            };
+
+            // Notify event organizer
+            req.io.to(`event:${eventId}:organizer`).emit('registration_created', updatePayload);
+
+            // Notify all admins
+            req.io.to('room:admin').emit('registration_created', updatePayload);
+        }
+
         res.status(201).json(registration);
     } catch (error) {
         res.status(400).json({ message: 'Registration failed', error: error.message });
@@ -132,4 +152,25 @@ const getMyRegistrations = async (req, res) => {
     }
 };
 
-module.exports = { registerForEvent, verifyAttendance, verifyAttendanceSelf, getMyRegistrations };
+// @desc    Get registrations for a specific event
+// @route   GET /api/registrations?eventId=xxx
+// @access  Private (Coordinator, Faculty, Admin)
+const getEventRegistrations = async (req, res) => {
+    try {
+        const { eventId } = req.query;
+
+        if (!eventId) {
+            return res.status(400).json({ message: 'Event ID is required' });
+        }
+
+        const registrations = await Registration.find({ event: eventId })
+            .populate('student', 'name email usn')
+            .sort({ createdAt: -1 });
+
+        res.json(registrations);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { registerForEvent, verifyAttendance, verifyAttendanceSelf, getMyRegistrations, getEventRegistrations };

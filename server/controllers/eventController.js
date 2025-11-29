@@ -27,9 +27,48 @@ const createEvent = async (req, res) => {
 
         await logActivity('CREATE_EVENT', req.user._id, createdEvent._id, 'Event', { title }, req);
 
+        // Emit socket event
+        if (req.io) {
+            req.io.emit('event_created', createdEvent);
+        }
+
         res.status(201).json(createdEvent);
     } catch (error) {
         res.status(400).json({ message: 'Invalid event data', error: error.message });
+    }
+};
+
+// @desc    Update event status (Approve/Reject)
+// @route   PUT /api/events/:id/status
+// @access  Private (Admin)
+const updateEventStatus = async (req, res) => {
+    try {
+        const { status } = req.body; // 'approved' or 'rejected'
+        const event = await Event.findById(req.params.id).populate('organizer', 'name email');
+
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        event.status = status;
+        const updatedEvent = await event.save();
+
+        await logActivity('UPDATE_EVENT_STATUS', req.user._id, event._id, 'Event', { status }, req);
+
+        // Emit socket events to specific rooms
+        if (req.io) {
+            // Notify admins that event was processed
+            req.io.to('room:admin').emit('event_status_updated', updatedEvent);
+
+            // If approved, notify all students about new event
+            if (status === 'approved') {
+                req.io.to('room:student').emit('event_approved', updatedEvent);
+            }
+        }
+
+        res.json(updatedEvent);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
@@ -103,4 +142,98 @@ const generateEventQR = async (req, res) => {
     }
 };
 
-module.exports = { createEvent, getEvents, getEventById, generateEventQR };
+// @desc    Update event
+// @route   PUT /api/events/:id
+// @access  Private (Coordinator/Faculty - own events, Admin - all)
+const updateEvent = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Check if user is authorized (owner or admin)
+        if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to update this event' });
+        }
+
+        // Update fields
+        const { title, description, date, time, venue, category, points, maxParticipants, startDate, startTime, endDate, endTime, coordinators } = req.body;
+
+        if (title) event.title = title;
+        if (description) event.description = description;
+        if (date) event.date = date;
+        if (time) event.time = time;
+        if (venue) event.venue = venue;
+        if (category) event.category = category;
+        if (points !== undefined) event.points = points;
+        if (maxParticipants !== undefined) event.maxParticipants = maxParticipants;
+        if (startDate) event.startDate = startDate;
+        if (startTime) event.startTime = startTime;
+        if (endDate) event.endDate = endDate;
+        if (endTime) event.endTime = endTime;
+        if (coordinators) event.coordinators = coordinators;
+
+        const updatedEvent = await event.save();
+        await updatedEvent.populate('organizer', 'name email');
+
+        await logActivity('UPDATE_EVENT', req.user._id, event._id, 'Event', { title }, req);
+
+        // Emit socket event for real-time updates
+        if (req.io) {
+            // Notify all students if event is approved
+            if (event.status === 'approved') {
+                req.io.to('room:student').emit('event_updated', updatedEvent);
+            }
+            // Notify admins
+            req.io.to('room:admin').emit('event_updated', updatedEvent);
+            // Notify event organizer
+            req.io.to(`event:${event._id}:organizer`).emit('event_updated', updatedEvent);
+        }
+
+        res.json(updatedEvent);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Delete event
+// @route   DELETE /api/events/:id
+// @access  Private (Coordinator/Faculty - own events, Admin - all)
+const deleteEvent = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Check if user is authorized (owner or admin)
+        if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to delete this event' });
+        }
+
+        await Event.findByIdAndDelete(req.params.id);
+
+        await logActivity('DELETE_EVENT', req.user._id, event._id, 'Event', { title: event.title }, req);
+
+        // Emit socket event for real-time updates
+        if (req.io) {
+            // Notify all students if event was approved
+            if (event.status === 'approved') {
+                req.io.to('room:student').emit('event_deleted', { _id: event._id });
+            }
+            // Notify admins
+            req.io.to('room:admin').emit('event_deleted', { _id: event._id });
+            // Notify event organizer
+            req.io.to(`event:${event._id}:organizer`).emit('event_deleted', { _id: event._id });
+        }
+
+        res.json({ message: 'Event deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+module.exports = { createEvent, getEvents, getEventById, generateEventQR, updateEventStatus, updateEvent, deleteEvent };

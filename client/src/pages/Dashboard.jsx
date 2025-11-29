@@ -1,6 +1,7 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import StudentLayout from '../components/StudentLayout';
 import CoordinatorLayout from '../components/CoordinatorLayout';
 import AdminLayout from '../components/AdminLayout';
@@ -12,6 +13,40 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import axios from 'axios';
 
 const StudentDashboard = ({ user, navigate }) => {
+    const socket = useSocket();
+    const [upcomingEvents, setUpcomingEvents] = useState([]);
+
+    useEffect(() => {
+        // Fetch initial events
+        fetchUpcomingEvents();
+    }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        // Listen for newly approved events
+        socket.on('event_approved', (newEvent) => {
+            console.log('New event approved:', newEvent);
+            setUpcomingEvents(prev => [newEvent, ...prev].slice(0, 5)); // Keep only 5 most recent
+        });
+
+        return () => {
+            socket.off('event_approved');
+        };
+    }, [socket]);
+
+    const fetchUpcomingEvents = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const { data } = await axios.get('http://localhost:5000/api/events?status=approved', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setUpcomingEvents(data.slice(0, 5)); // Get latest 5 events
+        } catch (error) {
+            console.error('Error fetching events:', error);
+        }
+    };
+
     // Mock Data
     const participationData = [
         { name: 'Tech', credits: 450, color: '#818CF8' },
@@ -102,6 +137,31 @@ const StudentDashboard = ({ user, navigate }) => {
                 </div>
             </div>
 
+            {/* Quick Actions */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <button onClick={() => navigate('/events')} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-500 hover:shadow-md transition-all group text-left">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors mb-4">
+                        <Calendar className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-1">Browse Events</h4>
+                    <p className="text-sm text-gray-500">Discover new activities</p>
+                </button>
+                <button onClick={() => navigate('/scan-qr')} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-purple-500 hover:shadow-md transition-all group text-left">
+                    <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors mb-4">
+                        <QrCode className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-1">Scan QR Code</h4>
+                    <p className="text-sm text-gray-500">Mark attendance</p>
+                </button>
+                <button onClick={() => navigate('/my-activities')} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-green-500 hover:shadow-md transition-all group text-left">
+                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors mb-4">
+                        <Award className="w-6 h-6 text-green-600" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-1">My Activities</h4>
+                    <p className="text-sm text-gray-500">View registrations</p>
+                </button>
+            </div>
+
             {/* Recommended Events */}
             <div className="mt-8">
                 <div className="flex justify-between items-center mb-6">
@@ -137,18 +197,91 @@ const StudentDashboard = ({ user, navigate }) => {
 };
 
 const CoordinatorDashboard = ({ user, navigate }) => {
-    const stats = [
-        { label: 'Total Events', value: '12', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { label: 'Pending Approvals', value: '25', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-        { label: 'Total Participants', value: '450', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-        { label: 'Completion %', value: '92%', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-    ];
+    const socket = useSocket();
+    const [stats, setStats] = useState([
+        { label: 'Total Events', value: '0', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { label: 'Pending Approvals', value: '0', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+        { label: 'Total Participants', value: '0', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { label: 'Completion %', value: '0%', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+    ]);
+    const [recentEvents, setRecentEvents] = useState([]);
 
-    const recentEvents = [
-        { id: 1, name: 'Tech Workshop', date: '2024-01-15', category: 'Technical', status: 'Upcoming' },
-        { id: 2, name: 'Cultural Fest', date: '2024-01-20', category: 'Cultural', status: 'Planning' },
-        { id: 3, name: 'Sports Day', date: '2024-01-25', category: 'Sports', status: 'Completed' },
-    ];
+    useEffect(() => {
+        fetchCoordinatorData();
+    }, []);
+
+    // Socket listeners for real-time updates
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('event_created', () => {
+            fetchCoordinatorData();
+        });
+
+        socket.on('event_updated', () => {
+            fetchCoordinatorData();
+        });
+
+        socket.on('event_deleted', () => {
+            fetchCoordinatorData();
+        });
+
+        socket.on('event_status_updated', () => {
+            fetchCoordinatorData();
+        });
+
+        return () => {
+            socket.off('event_created');
+            socket.off('event_updated');
+            socket.off('event_deleted');
+            socket.off('event_status_updated');
+        };
+    }, [socket]);
+
+    const fetchCoordinatorData = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const { data } = await axios.get('http://localhost:5000/api/events', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            // Filter coordinator's own events
+            const myEvents = data.filter(event => {
+                const organizerId = typeof event.organizer === 'object' ? event.organizer._id : event.organizer;
+                return organizerId === user._id;
+            });
+
+            // Get recent 5 events sorted by creation date
+            const recent = myEvents
+                .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
+                .slice(0, 5)
+                .map(event => ({
+                    id: event._id,
+                    name: event.title,
+                    date: new Date(event.date).toLocaleDateString(),
+                    category: event.category,
+                    status: event.status
+                }));
+
+            setRecentEvents(recent);
+
+            // Calculate stats
+            const totalEvents = myEvents.length;
+            const pendingEvents = myEvents.filter(e => e.status === 'pending').length;
+            const totalParticipants = myEvents.reduce((sum, e) => sum + (e.registeredCount || 0), 0);
+            const completedEvents = myEvents.filter(e => e.status === 'approved').length;
+            const completionPercentage = totalEvents > 0 ? Math.round((completedEvents / totalEvents) * 100) : 0;
+
+            setStats([
+                { label: 'Total Events', value: totalEvents.toString(), icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
+                { label: 'Pending Approvals', value: pendingEvents.toString(), icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+                { label: 'Total Participants', value: totalParticipants.toString(), icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+                { label: 'Completion %', value: `${completionPercentage}%`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+            ]);
+        } catch (error) {
+            console.error('Error fetching coordinator data:', error);
+        }
+    };
 
     return (
         <CoordinatorLayout user={user} title="Dashboard">
@@ -230,13 +363,13 @@ const CoordinatorDashboard = ({ user, navigate }) => {
                                 <p className="text-xs text-gray-500">Host a new activity</p>
                             </div>
                         </button>
-                        <button onClick={() => navigate('/scan-qr')} className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all group text-left">
+                        <button onClick={() => navigate('/coordinator/manage-participants')} className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all group text-left">
                             <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                <QrCode className="w-5 h-5 text-purple-600" />
+                                <Users className="w-5 h-5 text-purple-600" />
                             </div>
                             <div>
-                                <h4 className="font-bold text-gray-900">Scan QR Code</h4>
-                                <p className="text-xs text-gray-500">Mark attendance</p>
+                                <h4 className="font-bold text-gray-900">Manage Participants</h4>
+                                <p className="text-xs text-gray-500">View registrations</p>
                             </div>
                         </button>
                         <button onClick={() => navigate('/coordinator/reports')} className="w-full flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all group text-left">
