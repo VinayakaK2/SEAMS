@@ -241,19 +241,13 @@ const CoordinatorDashboard = ({ user, navigate }) => {
     const fetchCoordinatorData = async () => {
         try {
             const token = localStorage.getItem('token');
-            const { data } = await axios.get('http://localhost:5000/api/events', {
+            // Use optimized aggregation endpoint
+            const { data: myEvents } = await axios.get('http://localhost:5000/api/events/coordinator/stats', {
                 headers: { Authorization: `Bearer ${token}` }
-            });
-
-            // Filter coordinator's own events
-            const myEvents = data.filter(event => {
-                const organizerId = typeof event.organizer === 'object' ? event.organizer._id : event.organizer;
-                return organizerId === user._id;
             });
 
             // Get recent 5 events sorted by creation date
             const recent = myEvents
-                .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
                 .slice(0, 5)
                 .map(event => ({
                     id: event._id,

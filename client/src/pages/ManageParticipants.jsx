@@ -32,36 +32,11 @@ const ManageParticipants = () => {
     const fetchMyEventsWithParticipants = async () => {
         try {
             const token = localStorage.getItem('token');
-            // Fetch events created by this coordinator
-            const { data: events } = await axios.get('http://localhost:5000/api/events', {
+            // Fetch events and participants in a single optimized call (O(1))
+            const { data } = await axios.get('http://localhost:5000/api/events/coordinator/stats', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-
-            // Filter only coordinator's events and fetch registrations for each
-            const coordinatorEvents = events.filter(event => event.organizer === user._id || event.organizer._id === user._id);
-
-            const eventsWithRegs = await Promise.all(
-                coordinatorEvents.map(async (event) => {
-                    try {
-                        const { data: registrations } = await axios.get(
-                            `http://localhost:5000/api/registrations?eventId=${event._id}`,
-                            { headers: { Authorization: `Bearer ${token}` } }
-                        );
-                        return {
-                            ...event,
-                            participants: registrations
-                        };
-                    } catch (error) {
-                        console.error(`Error fetching registrations for event ${event._id}:`, error);
-                        return {
-                            ...event,
-                            participants: []
-                        };
-                    }
-                })
-            );
-
-            setEventsWithParticipants(eventsWithRegs);
+            setEventsWithParticipants(data);
         } catch (error) {
             console.error('Error fetching events:', error);
         }

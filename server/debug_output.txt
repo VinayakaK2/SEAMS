@@ -1,0 +1,17 @@
+Starting debug...
+Connected to MongoDB
+
+--- Coordinators ---
+Name: Yashwanth M, ID: 692a8745654591ec33e7ad9f, Email: yy6996843@gmail.com
+
+--- Events (2) ---
+Title: Hackathon
+  ID: 692abd60731603eae1fbaa18
+  Organizer: 692a8745654591ec33e7ad9f
+  Status: approved
+-------------------
+Title: dsfdssfdd
+  ID: 692ac5a52de55151e816fee1
+  Organizer: 692a8745654591ec33e7ad9f
+  Status: approved
+-------------------

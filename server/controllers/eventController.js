@@ -77,12 +77,18 @@ const updateEventStatus = async (req, res) => {
 // @access  Public
 const getEvents = async (req, res) => {
     try {
-        const { category, status } = req.query;
+        const { category, status, showAll } = req.query;
         const query = {};
 
         if (category) query.category = category;
-        if (status) query.status = status;
-        else query.status = 'approved'; // Default to showing only approved events to public
+
+        if (showAll === 'true') {
+            // Do not filter by status
+            if (status) query.status = status;
+        } else {
+            if (status) query.status = status;
+            else query.status = 'approved'; // Default to showing only approved events to public
+        }
 
         const events = await Event.find(query).sort({ date: 1 });
         res.json(events);
@@ -236,4 +242,99 @@ const deleteEvent = async (req, res) => {
     }
 };
 
-module.exports = { createEvent, getEvents, getEventById, generateEventQR, updateEventStatus, updateEvent, deleteEvent };
+// @desc    Get coordinator stats (Events + Participants) using Aggregation
+// @route   GET /api/events/coordinator/stats
+// @access  Private (Coordinator/Faculty)
+const getCoordinatorStats = async (req, res) => {
+    try {
+        const stats = await Event.aggregate([
+            // 1. Match events organized by the user
+            {
+                $match: {
+                    organizer: req.user._id
+                }
+            },
+            // 2. Lookup registrations for each event
+            {
+                $lookup: {
+                    from: 'registrations',
+                    localField: '_id',
+                    foreignField: 'event',
+                    as: 'registrations'
+                }
+            },
+            // 3. Unwind registrations to lookup student details (optional, but good for details)
+            // Note: If we just want count, we can skip this. But for "Manage Participants", we need details.
+            // However, unwinding empty arrays removes the event. So use preserveNullAndEmptyArrays.
+            {
+                $unwind: {
+                    path: '$registrations',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            // 4. Lookup student details for each registration
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'registrations.student',
+                    foreignField: '_id',
+                    as: 'registrations.studentDetails'
+                }
+            },
+            // 5. Unwind student details (since lookup returns an array)
+            {
+                $unwind: {
+                    path: '$registrations.studentDetails',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            // 6. Group back to event level
+            {
+                $group: {
+                    _id: '$_id',
+                    title: { $first: '$title' },
+                    date: { $first: '$date' },
+                    time: { $first: '$time' },
+                    venue: { $first: '$venue' },
+                    category: { $first: '$category' },
+                    status: { $first: '$status' },
+                    description: { $first: '$description' },
+                    points: { $first: '$points' },
+                    maxParticipants: { $first: '$maxParticipants' },
+                    coordinators: { $first: '$coordinators' },
+                    endTime: { $first: '$endTime' },
+                    endDate: { $first: '$endDate' },
+                    registeredCount: { $first: '$registeredCount' },
+                    participants: {
+                        $push: {
+                            $cond: [
+                                { $ifNull: ['$registrations._id', false] },
+                                {
+                                    _id: '$registrations._id',
+                                    status: '$registrations.status',
+                                    registeredAt: '$registrations.registeredAt',
+                                    student: {
+                                        _id: '$registrations.studentDetails._id',
+                                        name: '$registrations.studentDetails.name',
+                                        email: '$registrations.studentDetails.email',
+                                        usn: '$registrations.studentDetails.usn'
+                                    }
+                                },
+                                '$$REMOVE'
+                            ]
+                        }
+                    }
+                }
+            },
+            // 7. Sort by date descending
+            { $sort: { date: -1 } }
+        ]);
+
+        res.json(stats);
+    } catch (error) {
+        console.error('Aggregation Error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+module.exports = { createEvent, getEvents, getEventById, generateEventQR, updateEventStatus, updateEvent, deleteEvent, getCoordinatorStats };

@@ -49,17 +49,14 @@ const ManageEvents = () => {
     const fetchEvents = async () => {
         try {
             const token = localStorage.getItem('token');
-            const { data } = await axios.get('http://localhost:5000/api/events', {
+            // Use optimized aggregation endpoint
+            const { data } = await axios.get('http://localhost:5000/api/events/coordinator/stats', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            // Filter only coordinator's own events - handle both populated and non-populated organizer
-            const myEvents = data.filter(event => {
-                const organizerId = typeof event.organizer === 'object' ? event.organizer._id : event.organizer;
-                return organizerId === user._id;
-            });
-            console.log('Fetched my events:', myEvents);
-            setEvents(myEvents);
-            setFilteredEvents(myEvents);
+
+            console.log('Fetched my events:', data);
+            setEvents(data);
+            setFilteredEvents(data);
         } catch (error) {
             console.error('Error fetching events:', error);
         }

@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { createEvent, getEvents, getEventById, generateEventQR, updateEventStatus, updateEvent, deleteEvent } = require('../controllers/eventController');
+const { createEvent, getEvents, getEventById, generateEventQR, updateEventStatus, updateEvent, deleteEvent, getCoordinatorStats } = require('../controllers/eventController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 router.route('/')
     .get(getEvents)
     .post(protect, authorize('coordinator', 'faculty', 'admin'), createEvent);
+
+router.get('/coordinator/stats', protect, authorize('coordinator', 'faculty', 'admin'), getCoordinatorStats);
 
 router.route('/:id')
     .get(getEventById)
