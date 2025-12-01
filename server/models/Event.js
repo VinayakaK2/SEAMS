@@ -24,6 +24,11 @@ const eventSchema = mongoose.Schema({
     qrCode: { type: String }, // Unique string/token for QR
     qrActive: { type: Boolean, default: false },
     qrExpiresAt: { type: Date },
+    startDate: { type: Date },
+    startTime: { type: String },
+    endDate: { type: Date },
+    endTime: { type: String },
+    coordinators: [{ type: String }] // Array of coordinator names
 }, { timestamps: true });
 
 const Event = mongoose.model('Event', eventSchema);

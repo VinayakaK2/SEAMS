@@ -16,13 +16,20 @@ const VerifyEmail = () => {
             try {
                 const { data } = await axios.get(`http://localhost:5000/api/auth/verifyemail/${verificationToken}`);
 
-                setSuccess(true);
-                setError('');
+                // Check if backend says success
+                if (data.success) {
+                    setSuccess(true);
+                    setError('');
 
-                // Redirect to login after 3 seconds
-                setTimeout(() => {
-                    navigate('/login');
-                }, 3000);
+                    // Redirect to login after 3 seconds
+                    setTimeout(() => {
+                        navigate('/login');
+                    }, 3000);
+                } else {
+                    // Backend returned 200 but success: false
+                    setSuccess(false);
+                    setError(data.message || 'Verification failed');
+                }
             } catch (err) {
                 setSuccess(false);
                 setError(err.response?.data?.message || 'Verification failed');
