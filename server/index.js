@@ -106,7 +106,7 @@ app.use('/api/users', userRoutes);
 
 // SPA fallback - serve index.html for all non-API routes (production only)
 if (process.env.NODE_ENV === 'production') {
-    app.get('*', (req, res) => {
+    app.use((req, res) => {
         res.sendFile(path.join(__dirname, '../client/dist/index.html'));
     });
 }
