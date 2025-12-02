@@ -4,10 +4,10 @@ import AuthContext from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import axios from 'axios';
 import {
-import API_URL from '../config/api';
     CheckSquare, XCircle, Eye, Calendar, MapPin, User, Tag,
     Clock, CheckCircle, AlertTriangle
 } from 'lucide-react';
+import API_URL from '../config/api';
 
 const EventApprovals = () => {
     const { user } = useContext(AuthContext);
@@ -44,7 +44,7 @@ const EventApprovals = () => {
     const fetchPendingEvents = async () => {
         try {
             const token = localStorage.getItem('token');
-            const { data } = await axios.get('http://localhost:5000/api/events?status=pending', {
+            const { data } = await axios.get(`${API_URL}/api/events?status=pending`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setPendingEvents(data);
@@ -61,7 +61,7 @@ const EventApprovals = () => {
     const handleApprove = async (id) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/events/${id}/status`,
+            await axios.put(`${API_URL}/api/events/${id}/status`,
                 { status: 'approved' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -76,7 +76,7 @@ const EventApprovals = () => {
     const handleReject = async (id) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5000/api/events/${id}/status`,
+            await axios.put(`${API_URL}/api/events/${id}/status`,
                 { status: 'rejected' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

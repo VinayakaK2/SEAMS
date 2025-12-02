@@ -15,7 +15,7 @@ const VerifyEmail = () => {
     useEffect(() => {
         const verifyEmail = async () => {
             try {
-                const { data } = await axios.get(`http://localhost:5000/api/auth/verifyemail/${verificationToken}`);
+                const { data } = await axios.get(`${API_URL}/api/auth/verifyemail/${verificationToken}`);
 
                 // Check if backend says success
                 if (data.success) {

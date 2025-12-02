@@ -4,10 +4,10 @@ import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import StudentLayout from '../components/StudentLayout';
 import {
-import API_URL from '../config/api';
     Calendar, MapPin, User, Tag, Clock, ArrowLeft,
     CheckCircle, AlertCircle, Share2, Award
 } from 'lucide-react';
+import API_URL from '../config/api';
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -22,7 +22,7 @@ const EventDetails = () => {
     useEffect(() => {
         const fetchEvent = async () => {
             try {
-                const { data } = await axios.get(`http://localhost:5000/api/events/${id}`);
+                const { data } = await axios.get(`${API_URL}/api/events/${id}`);
                 setEvent(data);
             } catch (err) {
                 setError('Failed to load event details');
@@ -43,7 +43,7 @@ const EventDetails = () => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/registrations',
+            await axios.post(`${API_URL}/api/registrations`,
                 { eventId: id },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -196,8 +196,8 @@ const EventDetails = () => {
                                         onClick={handleRegister}
                                         disabled={registering || success}
                                         className={`w-full py-3 px-4 font-bold rounded-xl text-white shadow-lg shadow-blue-200 transition-all transform hover:scale-[1.02] ${success
-                                                ? 'bg-green-500 hover:bg-green-600'
-                                                : 'bg-blue-600 hover:bg-blue-700'
+                                            ? 'bg-green-500 hover:bg-green-600'
+                                            : 'bg-blue-600 hover:bg-blue-700'
                                             }`}
                                     >
                                         {registering ? 'Registering...' : success ? 'Registered' : 'Register Now'}

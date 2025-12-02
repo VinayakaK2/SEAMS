@@ -183,7 +183,7 @@ const EventList = () => {
                                 <div className="h-48 relative bg-gray-100">
                                     {event.poster ? (
                                         <img
-                                            src={`http://localhost:5000${event.poster}`}
+                                            src={`${API_URL}${event.poster}`}
                                             alt={event.title}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {

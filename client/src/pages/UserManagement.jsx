@@ -3,10 +3,10 @@ import AdminLayout from '../components/AdminLayout';
 import AuthContext from '../context/AuthContext';
 import axios from 'axios';
 import {
-import API_URL from '../config/api';
     Users, Search, Filter, Plus, MoreVertical, Edit, Trash2,
     CheckCircle, XCircle, Mail, Shield, Download, Lock
 } from 'lucide-react';
+import API_URL from '../config/api';
 
 const UserManagement = () => {
     const { user } = useContext(AuthContext);
@@ -34,7 +34,7 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            const { data } = await axios.get('http://localhost:5000/api/users', {
+            const { data } = await axios.get(`${API_URL}/api/users`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUsers(data);
@@ -50,7 +50,7 @@ const UserManagement = () => {
     const handleAddUser = async () => {
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/users', formData, {
+            await axios.post(`${API_URL}/api/users`, formData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsAddModalOpen(false);
@@ -81,7 +81,7 @@ const UserManagement = () => {
             const updateData = { ...formData };
             if (!updateData.password) delete updateData.password; // Don't send empty password
 
-            await axios.put(`http://localhost:5000/api/users/${editingUser._id}`, updateData, {
+            await axios.put(`${API_URL}/api/users/${editingUser._id}`, updateData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setIsEditModalOpen(false);
@@ -98,7 +98,7 @@ const UserManagement = () => {
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {
                 const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:5000/api/users/${id}`, {
+                await axios.delete(`${API_URL}/api/users/${id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 fetchUsers();
@@ -200,8 +200,8 @@ const UserManagement = () => {
                                     </td>
                                     <td className="py-4 px-6">
                                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold capitalize ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                                                u.role === 'coordinator' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-gray-100 text-gray-700'
+                                            u.role === 'coordinator' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-gray-100 text-gray-700'
                                             }`}>
                                             <Shield className="w-3 h-3" /> {u.role}
                                         </span>

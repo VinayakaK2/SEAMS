@@ -78,7 +78,7 @@ const ManageEvents = () => {
         try {
             const token = localStorage.getItem('token');
             const { data } = await axios.post(
-                `http://localhost:5000/api/events/${event._id}/qr`,
+                `${API_URL}/api/events/${event._id}/qr`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -145,7 +145,7 @@ const ManageEvents = () => {
                 time: editFormData.startTime,
                 coordinators: editCoordinators.filter(c => c.name || c.phone)
             };
-            await axios.put(`http://localhost:5000/api/events/${selectedEvent._id}`, updateData, {
+            await axios.put(`${API_URL}/api/events/${selectedEvent._id}`, updateData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setShowEditModal(false);
@@ -164,7 +164,7 @@ const ManageEvents = () => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:5000/api/events/${eventId}`, {
+            await axios.delete(`${API_URL}/api/events/${eventId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             alert('Event deleted successfully');
