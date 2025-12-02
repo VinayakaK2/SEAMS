@@ -4,6 +4,7 @@ import AuthContext from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import axios from 'axios';
 import { Users, ChevronDown, ChevronUp, Mail, Award, Calendar } from 'lucide-react';
+import API_URL from '../config/api';
 
 const ManageParticipants = () => {
     const { user } = useContext(AuthContext);

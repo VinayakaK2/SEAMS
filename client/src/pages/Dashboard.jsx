@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import axios from 'axios';
+import API_URL from '../config/api';
 
 const StudentDashboard = ({ user, navigate }) => {
     const socket = useSocket();

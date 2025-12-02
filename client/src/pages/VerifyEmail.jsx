@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Mail, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import API_URL from '../config/api';
 
 const VerifyEmail = () => {
     const [loading, setLoading] = useState(true);

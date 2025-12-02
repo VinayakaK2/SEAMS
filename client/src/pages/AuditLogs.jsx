@@ -3,6 +3,7 @@ import axios from 'axios';
 import AdminLayout from '../components/AdminLayout';
 import AuthContext from '../context/AuthContext';
 import { Search, Filter, Download, Shield, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import API_URL from '../config/api';
 
 const AuditLogs = () => {
     const { user } = useContext(AuthContext);

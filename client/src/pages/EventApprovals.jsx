@@ -4,6 +4,7 @@ import AuthContext from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import axios from 'axios';
 import {
+import API_URL from '../config/api';
     CheckSquare, XCircle, Eye, Calendar, MapPin, User, Tag,
     Clock, CheckCircle, AlertTriangle
 } from 'lucide-react';

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import API_URL from '../config/api';
 
 const AuthContext = createContext();
 
@@ -30,7 +31,7 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+            const { data } = await axios.post(`${API_URL}/api/auth/login`, { email, password });
             localStorage.setItem('token', data.token);
             setUser(data);
             return { success: true };
@@ -41,7 +42,7 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (userData) => {
         try {
-            const { data } = await axios.post('http://localhost:5000/api/auth/register', userData);
+            const { data } = await axios.post(`${API_URL}/api/auth/register`, userData);
             // No longer receiving a token, just a success message
             return { success: true, message: data.message };
         } catch (error) {

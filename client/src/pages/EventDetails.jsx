@@ -4,6 +4,7 @@ import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import StudentLayout from '../components/StudentLayout';
 import {
+import API_URL from '../config/api';
     Calendar, MapPin, User, Tag, Clock, ArrowLeft,
     CheckCircle, AlertCircle, Share2, Award
 } from 'lucide-react';

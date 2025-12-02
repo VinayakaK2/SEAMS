@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import API_URL from '../config/api';
 
 const MyProfile = () => {
     const { user } = useContext(AuthContext);

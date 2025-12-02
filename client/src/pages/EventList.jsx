@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import StudentLayout from '../components/StudentLayout';
 import { Calendar, MapPin, User, Tag, Clock, ArrowRight, Filter, Timer } from 'lucide-react';
+import API_URL from '../config/api';
 
 const EventList = () => {
     const { user } = useContext(AuthContext);

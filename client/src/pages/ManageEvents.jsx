@@ -5,6 +5,7 @@ import { useSocket } from '../context/SocketContext';
 import CoordinatorLayout from '../components/CoordinatorLayout';
 import { Search, QrCode, Trash2, Eye, Edit2, X, Calendar, MapPin, Users, Award, User, Phone, Plus } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import API_URL from '../config/api';
 
 const ManageEvents = () => {
     const { user } = useContext(AuthContext);

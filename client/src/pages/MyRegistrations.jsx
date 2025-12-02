@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import StudentLayout from '../components/StudentLayout';
 import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, QrCode } from 'lucide-react';
+import API_URL from '../config/api';
 
 const MyRegistrations = () => {
     const { user } = useContext(AuthContext);

@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 
@@ -12,15 +13,24 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173", // Allow client origin
-        methods: ["GET", "POST", "PUT", "DELETE"]
+        origin: process.env.CLIENT_URL || '*',
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        credentials: true
     }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL || '*',
+    credentials: true
+}));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+
+// Serve static files from React build (production)
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../client/dist')));
+}
 
 // Make io accessible to our router
 app.use((req, res, next) => {
@@ -67,8 +77,17 @@ io.on('connection', (socket) => {
 // Database Connection
 connectDB();
 
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV || 'development'
+    });
+});
+
 // Routes
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
     res.send('SEAMS API is running...');
 });
 
@@ -85,8 +104,16 @@ app.use('/api/events', eventRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/users', userRoutes);
 
+// SPA fallback - serve index.html for all non-API routes (production only)
+if (process.env.NODE_ENV === 'production') {
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+    });
+}
+
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

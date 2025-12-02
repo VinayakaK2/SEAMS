@@ -4,6 +4,7 @@ import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import StudentLayout from '../components/StudentLayout';
 import { Camera, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import API_URL from '../config/api';
 
 const QRScanner = () => {
     const { user } = useContext(AuthContext);

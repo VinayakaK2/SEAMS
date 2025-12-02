@@ -5,6 +5,7 @@ import AuthContext from '../context/AuthContext';
 import CoordinatorLayout from '../components/CoordinatorLayout';
 import { Calendar, MapPin, Users, Award, Upload, QrCode as QrCodeIcon, Image, Plus, X, Phone, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import API_URL from '../config/api';
 
 const CreateEvent = ({ embedded = false }) => {
     const { user } = useContext(AuthContext);

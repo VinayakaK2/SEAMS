@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { X, Phone, ShieldCheck, Loader } from 'lucide-react';
+import API_URL from '../config/api';
 
 const PhoneVerificationModal = ({ isOpen, onClose, onVerified }) => {
     const [step, setStep] = useState(1); // 1: Enter Phone, 2: Enter OTP

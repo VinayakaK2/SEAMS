@@ -3,6 +3,7 @@ import AdminLayout from '../components/AdminLayout';
 import AuthContext from '../context/AuthContext';
 import axios from 'axios';
 import {
+import API_URL from '../config/api';
     Users, Search, Filter, Plus, MoreVertical, Edit, Trash2,
     CheckCircle, XCircle, Mail, Shield, Download, Lock
 } from 'lucide-react';

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import API_URL from '../config/api';
 
 const ResetPassword = () => {
     const [password, setPassword] = useState('');
