@@ -4,10 +4,11 @@ const sendEmail = async (options) => {
     let transporter;
 
     try {
-        if (process.env.SMTP_HOST) {
+        if (process.env.SMTP_HOST && process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
+            // Use configured SMTP
             transporter = nodemailer.createTransport({
                 host: process.env.SMTP_HOST,
-                port: process.env.SMTP_PORT,
+                port: process.env.SMTP_PORT || 587,
                 secure: process.env.SMTP_PORT == '465', // true for 465, false for other ports
                 auth: {
                     user: process.env.SMTP_EMAIL,
@@ -17,8 +18,10 @@ const sendEmail = async (options) => {
                     rejectUnauthorized: false // Accept self-signed certificates
                 }
             });
+            console.log('Using configured SMTP server:', process.env.SMTP_HOST);
         } else {
-            console.log('SMTP_HOST not found, attempting to create Ethereal test account...');
+            // No SMTP configured - use Ethereal for testing
+            console.log('⚠️  SMTP not configured. Using Ethereal test account...');
             try {
                 const testAccount = await nodemailer.createTestAccount();
                 transporter = nodemailer.createTransport({
@@ -30,10 +33,10 @@ const sendEmail = async (options) => {
                         pass: testAccount.pass
                     }
                 });
-                console.log('Ethereal test account created successfully.');
+                console.log('✅ Ethereal test account created successfully.');
             } catch (etherealError) {
-                console.error('Failed to create Ethereal account:', etherealError.message);
-                console.log('Falling back to console-only email.');
+                console.error('❌ Failed to create Ethereal account:', etherealError.message);
+                console.log('📧 Email will not be sent. Check console for verification links.');
                 // Do not throw, just return. The controller has already logged the link.
                 return;
             }

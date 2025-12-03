@@ -92,6 +92,12 @@ const registerUser = async (req, res) => {
 
         const message = `Welcome to SEAMS! Please verify your email by clicking on the following link:\n\n${verificationUrl}\n\nThis link will expire in 24 hours.`;
 
+        console.log('----------------------------------------------------');
+        console.log('EMAIL VERIFICATION LINK (Copy this if email fails):');
+        console.log(verificationUrl);
+        console.log('User Email:', user.email);
+        console.log('----------------------------------------------------');
+
         try {
             await sendEmail({
                 email: user.email,
