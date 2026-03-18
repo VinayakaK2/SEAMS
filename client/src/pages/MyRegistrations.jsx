@@ -41,9 +41,9 @@ const MyRegistrations = () => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'verified': return 'text-green-600 bg-green-50 border-green-200';
-            case 'rejected': return 'text-red-600 bg-red-50 border-red-200';
-            default: return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+            case 'verified': return 'text-emerald-300 bg-emerald-500/20 border-emerald-500/30';
+            case 'rejected': return 'text-red-300 bg-red-500/20 border-red-500/30';
+            default: return 'text-yellow-300 bg-yellow-500/20 border-yellow-500/30';
         }
     };
 
@@ -58,14 +58,14 @@ const MyRegistrations = () => {
     return (
         <StudentLayout user={user} title="My Activities">
             {/* Tabs */}
-            <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl max-w-md mb-8">
+            <div className="flex space-x-1 glass-card border border-white/10 p-1 max-w-md mb-8">
                 {['pending', 'verified', 'rejected'].map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`flex-1 py-2.5 text-sm font-medium rounded-lg capitalize transition-all ${activeTab === tab
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white/10 text-white shadow-sm border border-white/10 shadow-glow'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
                         {tab}
@@ -76,18 +76,18 @@ const MyRegistrations = () => {
             {/* Content */}
             {loading ? (
                 <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <div className="w-12 h-12 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#6366F1', borderRightColor: '#8B5CF6' }}></div>
                 </div>
             ) : filteredRegistrations.length === 0 ? (
-                <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 border-dashed">
-                    <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Calendar className="w-8 h-8 text-gray-400" />
+                <div className="text-center py-16 glass-card border border-white/10 border-dashed">
+                    <div className="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                        <Calendar className="w-8 h-8 text-indigo-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900">No {activeTab} registrations</h3>
-                    <p className="text-gray-500 mt-1">You don't have any events in this category.</p>
+                    <h3 className="text-lg font-medium text-white">No {activeTab} registrations</h3>
+                    <p className="text-gray-400 mt-1">You don't have any events in this category.</p>
                     <button
                         onClick={() => navigate('/events')}
-                        className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="mt-6 px-6 py-2 btn-primary"
                     >
                         Browse Events
                     </button>
@@ -95,11 +95,11 @@ const MyRegistrations = () => {
             ) : (
                 <div className="grid gap-6">
                     {filteredRegistrations.map((reg) => (
-                        <div key={reg._id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6 items-start md:items-center">
+                        <div key={reg._id} className="glass-card p-6 border border-white/10 flex flex-col md:flex-row gap-6 items-start md:items-center hover:border-indigo-500/30 transition-all hover:shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_20px_rgba(99,102,241,0.1)]">
                             {/* Event Date Box */}
-                            <div className="flex-shrink-0 w-full md:w-24 h-24 bg-blue-50 rounded-2xl flex flex-col items-center justify-center text-blue-600">
+                            <div className="flex-shrink-0 w-full md:w-24 h-24 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex flex-col items-center justify-center text-indigo-400 shadow-inner">
                                 <span className="text-xs font-bold uppercase">{new Date(reg.event.date).toLocaleString('default', { month: 'short' })}</span>
-                                <span className="text-2xl font-bold">{new Date(reg.event.date).getDate()}</span>
+                                <span className="text-2xl font-bold text-indigo-300">{new Date(reg.event.date).getDate()}</span>
                                 <span className="text-xs opacity-75">{new Date(reg.event.date).getFullYear()}</span>
                             </div>
 
@@ -110,27 +110,27 @@ const MyRegistrations = () => {
                                         {getStatusIcon(reg.status)}
                                         {reg.status.toUpperCase()}
                                     </span>
-                                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                    <span className="text-xs font-medium text-gray-300 bg-white/10 border border-white/10 px-2 py-1 rounded">
                                         {reg.event.category}
                                     </span>
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-1">{reg.event.title}</h3>
-                                <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-2">
-                                    <span className="flex items-center"><Clock className="w-4 h-4 mr-1.5" /> {new Date(reg.event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                    <span className="flex items-center"><MapPin className="w-4 h-4 mr-1.5" /> {reg.event.venue}</span>
+                                <h3 className="text-lg font-bold text-white mb-1">{reg.event.title}</h3>
+                                <div className="flex flex-wrap gap-4 text-sm text-gray-400 mt-2">
+                                    <span className="flex items-center"><Clock className="w-4 h-4 mr-1.5 text-indigo-400" /> {new Date(reg.event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="flex items-center"><MapPin className="w-4 h-4 mr-1.5 text-indigo-400" /> {reg.event.venue}</span>
                                 </div>
                             </div>
 
                             {/* Actions */}
-                            <div className="flex flex-col gap-3 w-full md:w-auto">
+                            <div className="flex flex-col gap-3 w-full md:w-auto mt-4 md:mt-0">
                                 <button
                                     onClick={() => navigate(`/events/${reg.event._id}`)}
-                                    className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                                    className="px-6 py-2 text-sm font-medium text-gray-300 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white rounded-lg transition-colors shadow-sm"
                                 >
                                     View Details
                                 </button>
                                 {reg.status === 'verified' && (
-                                    <button className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                                    <button className="px-6 py-2 text-sm font-medium text-white btn-primary flex items-center justify-center gap-2">
                                         <QrCode className="w-4 h-4" />
                                         Show QR
                                     </button>

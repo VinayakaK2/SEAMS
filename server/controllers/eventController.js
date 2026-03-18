@@ -1,31 +1,102 @@
-const Event = require('../models/Event');
+const db = require('../db');
 const QRCode = require('qrcode');
 const logActivity = require('../utils/logger');
+const { updateUserTagProfile } = require('../utils/tagProfileUpdater');
+
+// ML Tagging Service URL (internal)
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:5001/ml/generate-tags';
+
+/**
+ * Record user activity for recommendation engine
+ */
+const recordActivity = async (userId, eventId, action) => {
+    try {
+        if (!userId || !eventId) return;
+        
+        await db('user_activity').insert({
+            user_id: userId,
+            event_id: eventId,
+            action,
+            timestamp: db.fn.now()
+        });
+
+        // V5: Core Metrics and Logging
+        if (action === 'impression') {
+            await db('recommendation_logs').insert({ user_id: userId, event_id: eventId, action: 'shown', timestamp: db.fn.now() });
+            await db('events').where({ id: eventId }).increment('total_impressions', 1);
+        } else if (action === 'view') {
+            await db('recommendation_logs').insert({ user_id: userId, event_id: eventId, action: 'clicked', timestamp: db.fn.now() });
+            await db('events').where({ id: eventId }).increment('total_clicks', 1);
+        } else if (action === 'skip') {
+            await db('recommendation_logs').insert({ user_id: userId, event_id: eventId, action: 'skipped', timestamp: db.fn.now() });
+        } else if (action === 'like') {
+            await db('events').where({ id: eventId }).increment('total_likes', 1);
+        } else if (action === 'register') {
+            await db('events').where({ id: eventId }).increment('total_registrations', 1);
+        }
+
+        // V3: Incrementally update user's semantic learning profile
+        await updateUserTagProfile(userId, eventId, action);
+        
+    } catch (error) {
+        console.error('recordActivity error:', error.message);
+    }
+};
 
 // @desc    Create a new event
 // @route   POST /api/events
 // @access  Private (Coordinator, Faculty, Admin)
 const createEvent = async (req, res) => {
     try {
-        const { title, description, date, time, venue, category, points, maxParticipants, poster } = req.body;
+        const { title, description, date, time, venue, category, points, maxParticipants, poster, coordinators } = req.body;
+        const userId = req.user.id || req.user._id;
 
-        const event = new Event({
-            title,
-            description,
-            date,
-            time,
-            venue,
-            category,
-            points,
-            maxParticipants,
-            poster,
-            organizer: req.user._id,
-            status: req.user.role === 'admin' || req.user.role === 'faculty' ? 'approved' : 'pending'
+        // Input validation
+        if (!title || !description || !date || !time || !venue || !category || points === undefined) {
+            return res.status(400).json({ message: 'Missing required event fields' });
+        }
+        if (typeof points !== 'number' || points < 0) {
+            return res.status(400).json({ message: 'Points must be a non-negative number' });
+        }
+
+        // Use transaction to insert event and coordinators safely
+        const createdEvent = await db.transaction(async trx => {
+            const [event] = await trx('events').insert({
+                title: title.trim(),
+                description: description.trim(),
+                date,
+                time,
+                venue: venue.trim(),
+                category,
+                points: parseInt(points, 10),
+                maxParticipants: maxParticipants ? parseInt(maxParticipants, 10) : null,
+                poster,
+                organizer_id: userId,
+                status: req.user.role === 'admin' || req.user.role === 'faculty' ? 'approved' : 'pending',
+                tags: JSON.stringify([]), // Will be updated by ML service async
+                keywords: JSON.stringify([]) // Will be updated by ML service async
+            }).returning('*');
+
+            if (coordinators && Array.isArray(coordinators) && coordinators.length > 0) {
+                const coordinatorInserts = coordinators.map(c => ({
+                    event_id: event.id,
+                    coordinator_name: c
+                }));
+                await trx('event_coordinators').insert(coordinatorInserts);
+                event.coordinators = coordinators;
+            } else {
+                event.coordinators = [];
+            }
+            return event;
         });
 
-        const createdEvent = await event.save();
+        // Add _id for frontend compatibility
+        createdEvent._id = createdEvent.id;
 
-        await logActivity('CREATE_EVENT', req.user._id, createdEvent._id, 'Event', { title }, req);
+        // Invalidate event list cache so new event appears immediately
+        await invalidateEventCaches();
+
+        await logActivity('CREATE_EVENT', userId, createdEvent.id.toString(), 'Event', { title }, req);
 
         // Emit socket event
         if (req.io) {
@@ -34,6 +105,7 @@ const createEvent = async (req, res) => {
 
         res.status(201).json(createdEvent);
     } catch (error) {
+        console.error('createEvent error:', error);
         res.status(400).json({ message: 'Invalid event data', error: error.message });
     }
 };
@@ -44,23 +116,33 @@ const createEvent = async (req, res) => {
 const updateEventStatus = async (req, res) => {
     try {
         const { status } = req.body; // 'approved' or 'rejected'
-        const event = await Event.findById(req.params.id).populate('organizer', 'name email');
+        const userId = req.user.id || req.user._id;
+
+        const event = await db('events').where({ id: req.params.id }).first();
 
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
 
-        event.status = status;
-        const updatedEvent = await event.save();
+        const [updatedEvent] = await db('events')
+            .where({ id: req.params.id })
+            .update({ status, updated_at: db.fn.now() })
+            .returning('*');
 
-        await logActivity('UPDATE_EVENT_STATUS', req.user._id, event._id, 'Event', { status }, req);
+        updatedEvent._id = updatedEvent.id;
 
-        // Emit socket events to specific rooms
+        // Fetch organizer details for frontend compatibility
+        const organizer = await db('users').where({ id: updatedEvent.organizer_id }).select('id as _id', 'name', 'email').first();
+        updatedEvent.organizer = organizer;
+
+        await logActivity('UPDATE_EVENT_STATUS', userId, updatedEvent.id.toString(), 'Event', { status }, req);
+
+        // Invalidate cache for this event and all event lists
+        await invalidateEventCaches(updatedEvent.id);
+
+        // Emit socket events
         if (req.io) {
-            // Notify admins that event was processed
             req.io.to('room:admin').emit('event_status_updated', updatedEvent);
-
-            // If approved, notify all students about new event
             if (status === 'approved') {
                 req.io.to('room:student').emit('event_approved', updatedEvent);
             }
@@ -68,6 +150,7 @@ const updateEventStatus = async (req, res) => {
 
         res.json(updatedEvent);
     } catch (error) {
+        console.error('updateEventStatus error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
@@ -78,21 +161,47 @@ const updateEventStatus = async (req, res) => {
 const getEvents = async (req, res) => {
     try {
         const { category, status, showAll } = req.query;
-        const query = {};
+        let query = db('events').select('*').orderBy('date', 'asc');
 
-        if (category) query.category = category;
+        if (category) query = query.where('category', category);
 
         if (showAll === 'true') {
-            // Do not filter by status
-            if (status) query.status = status;
+            if (status) query = query.where('status', status);
         } else {
-            if (status) query.status = status;
-            else query.status = 'approved'; // Default to showing only approved events to public
+            if (status) query = query.where('status', status);
+            else query = query.where('status', 'approved');
+            
+            // Hide events older than 3 days from the main feeds
+            query = query.whereRaw("date >= CURRENT_DATE - INTERVAL '3 days'");
         }
 
-        const events = await Event.find(query).sort({ date: 1 });
-        res.json(events);
+        const events = await query;
+
+        // Fetch coordinators for each event
+        const eventIds = events.map(e => e.id);
+        const allCoordinators = eventIds.length > 0 ? await db('event_coordinators').whereIn('event_id', eventIds) : [];
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const formattedEvents = events.map(event => {
+            const ev = { ...event, _id: event.id };
+            ev.coordinators = allCoordinators
+                .filter(c => c.event_id === event.id)
+                .map(c => c.coordinator_name);
+                
+            // V5: Mark events in the past (within the 3 day window) as 'ended'
+            const eventDate = new Date(event.date);
+            if (eventDate < now && ev.status === 'approved') {
+                ev.status = 'ended';
+            }
+                
+            return ev;
+        });
+
+        res.json(formattedEvents);
     } catch (error) {
+        console.error('getEvents error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -102,13 +211,45 @@ const getEvents = async (req, res) => {
 // @access  Public
 const getEventById = async (req, res) => {
     try {
-        const event = await Event.findById(req.params.id).populate('organizer', 'name email');
-        if (event) {
-            res.json(event);
-        } else {
-            res.status(404).json({ message: 'Event not found' });
+        // Single JOIN query — eliminates extra round-trips for organizer lookup
+        const event = await db('events')
+            .leftJoin('users as organizers', 'events.organizer_id', '=', 'organizers.id')
+            .where('events.id', req.params.id)
+            .select(
+                'events.*',
+                'organizers.id as org_id',
+                'organizers.name as org_name',
+                'organizers.email as org_email'
+            )
+            .first();
+
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
         }
+
+        // Fetch coordinators separately (no N+1 since it is a single event)
+        const coordinators = await db('event_coordinators')
+            .where({ event_id: event.id })
+            .pluck('coordinator_name');
+
+        // Record View Activity for Recommendations
+        const userId = req.user ? (req.user.id || req.user._id) : null;
+        if (userId) {
+            await recordActivity(userId, event.id, 'view');
+        }
+
+        res.json({
+            ...event,
+            _id: event.id,
+            organizer: event.org_id ? { _id: event.org_id, name: event.org_name, email: event.org_email } : null,
+            coordinators,
+            // Remove flattened organizer columns from top-level response
+            org_id: undefined,
+            org_name: undefined,
+            org_email: undefined
+        });
     } catch (error) {
+        console.error('getEventById error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -118,32 +259,33 @@ const getEventById = async (req, res) => {
 // @access  Private (Organizer/Admin)
 const generateEventQR = async (req, res) => {
     try {
-        const event = await Event.findById(req.params.id);
+        const userId = req.user.id || req.user._id;
+        const event = await db('events').where({ id: req.params.id }).first();
 
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
 
-        // Check ownership
-        if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        if (Number(event.organizer_id) !== Number(userId) && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
-        // Generate a unique token for the QR
-        const qrToken = `${event._id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-        event.qrCode = qrToken;
-        event.qrActive = true;
-        event.qrExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // Valid for 1 hour
+        const qrToken = `${event.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const qrExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-        await event.save();
+        await db('events').where({ id: event.id }).update({
+            qrCode: qrToken,
+            qrActive: true,
+            qrExpiresAt
+        });
 
-        // Generate Data URL
         const qrDataUrl = await QRCode.toDataURL(qrToken);
 
-        await logActivity('GENERATE_QR', req.user._id, event._id, 'Event', { qrToken }, req);
+        await logActivity('GENERATE_QR', userId, event.id.toString(), 'Event', { qrToken }, req);
 
         res.json({ qrCode: qrToken, qrDataUrl });
     } catch (error) {
+        console.error('generateEventQR error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
@@ -153,53 +295,73 @@ const generateEventQR = async (req, res) => {
 // @access  Private (Coordinator/Faculty - own events, Admin - all)
 const updateEvent = async (req, res) => {
     try {
-        const event = await Event.findById(req.params.id);
+        const userId = req.user.id || req.user._id;
+        const event = await db('events').where({ id: req.params.id }).first();
 
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
 
-        // Check if user is authorized (owner or admin)
-        if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        if (Number(event.organizer_id) !== Number(userId) && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'Not authorized to update this event' });
         }
 
-        // Update fields
         const { title, description, date, time, venue, category, points, maxParticipants, startDate, startTime, endDate, endTime, coordinators } = req.body;
 
-        if (title) event.title = title;
-        if (description) event.description = description;
-        if (date) event.date = date;
-        if (time) event.time = time;
-        if (venue) event.venue = venue;
-        if (category) event.category = category;
-        if (points !== undefined) event.points = points;
-        if (maxParticipants !== undefined) event.maxParticipants = maxParticipants;
-        if (startDate) event.startDate = startDate;
-        if (startTime) event.startTime = startTime;
-        if (endDate) event.endDate = endDate;
-        if (endTime) event.endTime = endTime;
-        if (coordinators) event.coordinators = coordinators;
+        const updateData = { updated_at: db.fn.now() };
+        if (title) updateData.title = title;
+        if (description) updateData.description = description;
+        if (date) updateData.date = date;
+        if (time) updateData.time = time;
+        if (venue) updateData.venue = venue;
+        if (category) updateData.category = category;
+        if (points !== undefined) updateData.points = points;
+        if (maxParticipants !== undefined) updateData.maxParticipants = maxParticipants;
+        if (startDate) updateData.startDate = startDate;
+        if (startTime) updateData.startTime = startTime;
+        if (endDate) updateData.endDate = endDate;
+        if (endTime) updateData.endTime = endTime;
 
-        const updatedEvent = await event.save();
-        await updatedEvent.populate('organizer', 'name email');
+        const updatedEvent = await db.transaction(async trx => {
+            const [ev] = await trx('events')
+                .where({ id: event.id })
+                .update(updateData)
+                .returning('*');
 
-        await logActivity('UPDATE_EVENT', req.user._id, event._id, 'Event', { title }, req);
+            if (coordinators !== undefined) {
+                await trx('event_coordinators').where({ event_id: ev.id }).del();
+                if (coordinators.length > 0) {
+                    const inserts = coordinators.map(c => ({ event_id: ev.id, coordinator_name: c }));
+                    await trx('event_coordinators').insert(inserts);
+                }
+                ev.coordinators = coordinators;
+            } else {
+                const currentCoordinators = await trx('event_coordinators').where({ event_id: ev.id }).pluck('coordinator_name');
+                ev.coordinators = currentCoordinators;
+            }
+            return ev;
+        });
 
-        // Emit socket event for real-time updates
+        updatedEvent._id = updatedEvent.id;
+        const organizer = await db('users').where({ id: updatedEvent.organizer_id }).select('id as _id', 'name', 'email').first();
+        updatedEvent.organizer = organizer;
+
+        await logActivity('UPDATE_EVENT', userId, event.id.toString(), 'Event', { title }, req);
+
+        // Invalidate cache for this event and all event lists
+        await invalidateEventCaches(updatedEvent.id);
+
         if (req.io) {
-            // Notify all students if event is approved
-            if (event.status === 'approved') {
+            if (updatedEvent.status === 'approved') {
                 req.io.to('room:student').emit('event_updated', updatedEvent);
             }
-            // Notify admins
             req.io.to('room:admin').emit('event_updated', updatedEvent);
-            // Notify event organizer
-            req.io.to(`event:${event._id}:organizer`).emit('event_updated', updatedEvent);
+            req.io.to(`event:${updatedEvent.id}:organizer`).emit('event_updated', updatedEvent);
         }
 
         res.json(updatedEvent);
     } catch (error) {
+        console.error('updateEvent error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
@@ -209,132 +371,145 @@ const updateEvent = async (req, res) => {
 // @access  Private (Coordinator/Faculty - own events, Admin - all)
 const deleteEvent = async (req, res) => {
     try {
-        const event = await Event.findById(req.params.id);
+        const userId = req.user.id || req.user._id;
+        const event = await db('events').where({ id: req.params.id }).first();
 
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
 
-        // Check if user is authorized (owner or admin)
-        if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        if (Number(event.organizer_id) !== Number(userId) && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'Not authorized to delete this event' });
         }
 
-        await Event.findByIdAndDelete(req.params.id);
+        await db('events').where({ id: req.params.id }).del(); // CASCADE deletes related records
 
-        await logActivity('DELETE_EVENT', req.user._id, event._id, 'Event', { title: event.title }, req);
+        await logActivity('DELETE_EVENT', userId, event.id.toString(), 'Event', { title: event.title }, req);
 
-        // Emit socket event for real-time updates
+        // Invalidate cache for this event and all event lists
+        await invalidateEventCaches(event.id);
+
         if (req.io) {
-            // Notify all students if event was approved
             if (event.status === 'approved') {
-                req.io.to('room:student').emit('event_deleted', { _id: event._id });
+                req.io.to('room:student').emit('event_deleted', { _id: event.id });
             }
-            // Notify admins
-            req.io.to('room:admin').emit('event_deleted', { _id: event._id });
-            // Notify event organizer
-            req.io.to(`event:${event._id}:organizer`).emit('event_deleted', { _id: event._id });
+            req.io.to('room:admin').emit('event_deleted', { _id: event.id });
+            req.io.to(`event:${event.id}:organizer`).emit('event_deleted', { _id: event.id });
         }
 
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
+        console.error('deleteEvent error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
-// @desc    Get coordinator stats (Events + Participants) using Aggregation
+// @desc    Get coordinator stats (Events + Participants)
 // @route   GET /api/events/coordinator/stats
 // @access  Private (Coordinator/Faculty)
 const getCoordinatorStats = async (req, res) => {
     try {
-        const stats = await Event.aggregate([
-            // 1. Match events organized by the user
-            {
-                $match: {
-                    organizer: req.user._id
-                }
-            },
-            // 2. Lookup registrations for each event
-            {
-                $lookup: {
-                    from: 'registrations',
-                    localField: '_id',
-                    foreignField: 'event',
-                    as: 'registrations'
-                }
-            },
-            // 3. Unwind registrations to lookup student details (optional, but good for details)
-            // Note: If we just want count, we can skip this. But for "Manage Participants", we need details.
-            // However, unwinding empty arrays removes the event. So use preserveNullAndEmptyArrays.
-            {
-                $unwind: {
-                    path: '$registrations',
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            // 4. Lookup student details for each registration
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'registrations.student',
-                    foreignField: '_id',
-                    as: 'registrations.studentDetails'
-                }
-            },
-            // 5. Unwind student details (since lookup returns an array)
-            {
-                $unwind: {
-                    path: '$registrations.studentDetails',
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            // 6. Group back to event level
-            {
-                $group: {
-                    _id: '$_id',
-                    title: { $first: '$title' },
-                    date: { $first: '$date' },
-                    time: { $first: '$time' },
-                    venue: { $first: '$venue' },
-                    category: { $first: '$category' },
-                    status: { $first: '$status' },
-                    description: { $first: '$description' },
-                    points: { $first: '$points' },
-                    maxParticipants: { $first: '$maxParticipants' },
-                    coordinators: { $first: '$coordinators' },
-                    endTime: { $first: '$endTime' },
-                    endDate: { $first: '$endDate' },
-                    registeredCount: { $first: '$registeredCount' },
-                    participants: {
-                        $push: {
-                            $cond: [
-                                { $ifNull: ['$registrations._id', false] },
-                                {
-                                    _id: '$registrations._id',
-                                    status: '$registrations.status',
-                                    registeredAt: '$registrations.registeredAt',
-                                    student: {
-                                        _id: '$registrations.studentDetails._id',
-                                        name: '$registrations.studentDetails.name',
-                                        email: '$registrations.studentDetails.email',
-                                        usn: '$registrations.studentDetails.usn'
-                                    }
-                                },
-                                '$$REMOVE'
-                            ]
-                        }
-                    }
-                }
-            },
-            // 7. Sort by date descending
-            { $sort: { date: -1 } }
-        ]);
-
+        const userId = req.user.id || req.user._id;
+        // Uses dbService: batches all queries with Promise.all + caches result
+        const stats = await dbService.getCoordinatorStats(userId);
         res.json(stats);
     } catch (error) {
-        console.error('Aggregation Error:', error);
+        console.error('getCoordinatorStats error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
-module.exports = { createEvent, getEvents, getEventById, generateEventQR, updateEventStatus, updateEvent, deleteEvent, getCoordinatorStats };
+// @desc    Like an event
+// @desc    Like an event
+// @route   POST /api/events/:id/like
+// @access  Private (Student)
+const likeEvent = async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const eventId = req.params.id;
+
+        const event = await db('events').where({ id: eventId }).first();
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Check if already liked (to avoid duplication in activity, though not strictly prohibited)
+        const recentLike = await db('user_activity')
+            .where({ user_id: userId, event_id: eventId, action: 'like' })
+            .first();
+
+        if (recentLike) {
+            return res.status(400).json({ message: 'Event already liked' });
+        }
+
+        await recordActivity(userId, eventId, 'like');
+
+        res.json({ message: 'Event liked successfully' });
+    } catch (error) {
+        console.error('likeEvent error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Skip an event
+// @route   POST /api/events/:id/skip
+// @access  Private (Student)
+const skipEvent = async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const eventId = req.params.id;
+
+        const event = await db('events').where({ id: eventId }).first();
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        await recordActivity(userId, eventId, 'skip');
+        res.json({ message: 'Event skipped successfully' });
+    } catch (error) {
+        console.error('skipEvent error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Dislike an event
+// @route   POST /api/events/:id/dislike
+// @access  Private (Student)
+const dislikeEvent = async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const eventId = req.params.id;
+
+        const event = await db('events').where({ id: eventId }).first();
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        await recordActivity(userId, eventId, 'dislike');
+        res.json({ message: 'Event disliked successfully' });
+    } catch (error) {
+        console.error('dislikeEvent error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Record an event impression
+// @route   POST /api/events/:id/impression
+// @access  Private (Student)
+const recordImpression = async (req, res) => {
+    try {
+        const userId = req.user.id || req.user._id;
+        const eventId = req.params.id;
+
+        const event = await db('events').where({ id: eventId }).first();
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        await recordActivity(userId, eventId, 'impression');
+        res.json({ message: 'Impression recorded' });
+    } catch (error) {
+        console.error('recordImpression error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { 
+    createEvent, getEvents, getEventById, generateEventQR, 
+    updateEventStatus, updateEvent, deleteEvent, getCoordinatorStats, 
+    likeEvent, skipEvent, dislikeEvent, recordImpression 
+};

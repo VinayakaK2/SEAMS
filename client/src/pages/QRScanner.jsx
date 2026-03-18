@@ -84,43 +84,50 @@ const QRScanner = () => {
     return (
         <StudentLayout user={user} title="Scan QR Code">
             <div className="max-w-md mx-auto">
-                <div className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100">
+                <div className="glass-card p-6 border border-white/10">
                     {!scanResult ? (
                         <div className="space-y-6">
                             <div className="text-center">
-                                <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Camera className="w-8 h-8 text-blue-600" />
+                                <div className="bg-indigo-500/20 border border-indigo-500/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Camera className="w-8 h-8 text-indigo-400" />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900">Scan Event QR</h3>
-                                <p className="text-gray-500 mt-2">Point your camera at the event QR code to mark your attendance.</p>
+                                <h3 className="text-xl font-bold text-white">Scan Event QR</h3>
+                                <p className="text-gray-400 mt-2">Point your camera at the event QR code to mark your attendance.</p>
                             </div>
 
-                            <div className="overflow-hidden rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 relative">
+                            <div className="overflow-hidden rounded-2xl border-2 border-dashed border-white/20 bg-black/20 relative">
                                 <div id="reader" className="w-full"></div>
+                                <style>{`
+                                    #reader { bg: transparent !important; border: none !important; }
+                                    #reader__dashboard_section_csr span { color: white !important; }
+                                    #reader__dashboard_section_swaplink { color: #818cf8 !important; }
+                                    #reader__camera_selection { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 4px; }
+                                    #reader button { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+                                `}</style>
                             </div>
                         </div>
                     ) : (
                         <div className="text-center py-8">
-                            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isSuccess ? 'bg-green-100' : 'bg-red-100'}`}>
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isSuccess ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-red-500/20 border-red-500/30'} border`}>
                                 {isSuccess ? (
-                                    <CheckCircle className="w-10 h-10 text-green-600" />
+                                    <CheckCircle className="w-10 h-10 text-emerald-400" />
                                 ) : (
-                                    <XCircle className="w-10 h-10 text-red-600" />
+                                    <XCircle className="w-10 h-10 text-red-400" />
                                 )}
                             </div>
 
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                            <h3 className="text-2xl font-bold text-white mb-2">
                                 {isSuccess ? 'Success!' : 'Failed'}
                             </h3>
-                            <p className={`text-lg mb-8 ${isSuccess ? 'text-green-600' : 'text-red-600'}`}>
+                            <p className={`text-lg mb-8 ${isSuccess ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {message}
                             </p>
 
                             <button
                                 onClick={resetScanner}
-                                className="w-full py-3 px-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                className="w-full py-3 px-4 btn-primary flex items-center justify-center gap-2"
                             >
-                                <RefreshCw className="w-5 h-5 mr-2" />
+                                <RefreshCw className="w-5 h-5" />
                                 Scan Another
                             </button>
                         </div>

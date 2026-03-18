@@ -1,9 +1,14 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
-import { User, Lock } from 'lucide-react';
-
+import { User, Lock, ArrowRight, Sparkles, Trophy, Calendar, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+const features = [
+    { icon: Calendar, text: 'Discover & register for campus events instantly' },
+    { icon: Trophy, text: 'Earn points and climb the leaderboard' },
+    { icon: Star, text: 'Build your verified campus profile' },
+];
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -11,10 +16,14 @@ const Login = () => {
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
+        setError('');
         const result = await login(email, password);
+        setLoading(false);
         if (result.success) {
             navigate('/');
         } else {
@@ -23,206 +32,160 @@ const Login = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-white">
-            {/* Left Side - Animated Background & Welcome */}
-            <div className="hidden w-1/2 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 lg:flex flex-col justify-center items-center p-12 relative overflow-hidden">
-                {/* Animated Background Shapes */}
-                <div className="absolute inset-0 w-full h-full overflow-hidden">
-                    {/* Circle - Bright Cyan Glow */}
-                    <motion.div
-                        className="absolute top-[10%] left-[10%] w-40 h-40 rounded-full bg-gradient-to-br from-cyan-300 to-blue-500 opacity-60 blur-2xl"
-                        animate={{
-                            y: [0, -40, 0],
-                            x: [0, 30, 0],
-                            scale: [1, 1.2, 1],
-                        }}
-                        transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
-                    />
-                    <motion.div
-                        className="absolute top-[10%] left-[10%] w-40 h-40 rounded-full bg-gradient-to-br from-cyan-200/30 to-blue-400/30 backdrop-blur-3xl border border-white/20 shadow-[0_0_40px_rgba(34,211,238,0.4)]"
-                        animate={{
-                            y: [0, -40, 0],
-                            x: [0, 30, 0],
-                            rotate: [0, 15, 0],
-                        }}
-                        transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
-                    />
+        <div className="flex min-h-screen page-bg overflow-hidden">
+            {/* ─── LEFT PANEL ─── */}
+            <div className="hidden lg:flex w-1/2 relative flex-col justify-center items-center p-14 overflow-hidden">
+                {/* Ambient blobs */}
+                <div className="ambient-blob w-80 h-80 bg-indigo-600/25 top-[-5%] left-[-10%] animate-blob" />
+                <div className="ambient-blob w-96 h-96 bg-purple-600/20 bottom-[5%] right-[-15%] animate-blob-2" />
+                <div className="ambient-blob w-64 h-64 bg-sky-500/15 top-[40%] left-[20%] animate-blob-3" />
 
-                    {/* Pill - Vibrant Pink/Purple */}
-                    <motion.div
-                        className="absolute bottom-[15%] left-[5%] w-56 h-28 rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500 opacity-50 blur-2xl"
-                        animate={{
-                            y: [0, 50, 0],
-                            rotate: [0, -15, 0],
-                        }}
-                        transition={{
-                            duration: 5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: 0.5
-                        }}
-                    />
-                    <motion.div
-                        className="absolute bottom-[15%] left-[5%] w-56 h-28 rounded-full bg-gradient-to-r from-fuchsia-400/20 to-pink-400/20 backdrop-blur-2xl border border-white/20 shadow-[0_0_40px_rgba(232,121,249,0.3)]"
-                        animate={{
-                            y: [0, 50, 0],
-                            rotate: [0, -15, 0],
-                        }}
-                        transition={{
-                            duration: 5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: 0.5
-                        }}
-                    />
-
-                    {/* Soft Blob - Electric Indigo */}
-                    <motion.div
-                        className="absolute top-[35%] right-[10%] w-72 h-72 bg-gradient-to-tr from-indigo-500 to-violet-400 opacity-40 blur-[50px]"
-                        animate={{
-                            scale: [1, 1.3, 1],
-                            rotate: [0, 180, 0],
-                        }}
-                        transition={{
-                            duration: 7,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
-                        style={{ borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%' }}
-                    />
-                    <motion.div
-                        className="absolute top-[35%] right-[10%] w-64 h-64 bg-gradient-to-tr from-indigo-400/20 to-violet-300/20 backdrop-blur-xl border border-white/20 shadow-[0_0_50px_rgba(129,140,248,0.3)]"
-                        animate={{
-                            scale: [1, 1.1, 1],
-                            rotate: [0, 90, 0],
-                        }}
-                        transition={{
-                            duration: 6,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: 1
-                        }}
-                        style={{ borderRadius: '50% 50% 50% 50% / 50% 50% 50% 50%' }}
-                    />
-
-                    {/* Rounded Square - White/Blue Glass */}
-                    <motion.div
-                        className="absolute top-[5%] right-[20%] w-20 h-20 rounded-3xl bg-gradient-to-bl from-white to-blue-200 opacity-60 blur-xl"
-                        animate={{
-                            y: [0, 30, 0],
-                            rotate: [0, 90, 0],
-                        }}
-                        transition={{
-                            duration: 4.5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: 0.2
-                        }}
-                    />
-                    <motion.div
-                        className="absolute top-[5%] right-[20%] w-20 h-20 rounded-3xl bg-gradient-to-bl from-white/30 to-blue-100/30 backdrop-blur-md border border-white/40 shadow-[0_0_30px_rgba(255,255,255,0.4)]"
-                        animate={{
-                            y: [0, 30, 0],
-                            rotate: [0, 90, 0],
-                        }}
-                        transition={{
-                            duration: 4.5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: 0.2
-                        }}
-                    />
-                </div>
+                {/* Subtle grid overlay */}
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%236366F1%22 fill-opacity=%220.04%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
 
                 {/* Content */}
-                <div className="z-10 text-center relative">
-                    <motion.div
-                        className="mb-6 inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/30 shadow-2xl"
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                        <User className="w-12 h-12 text-white drop-shadow-md" />
-                    </motion.div>
-                    <h1 className="mb-4 text-6xl font-extrabold text-white drop-shadow-xl tracking-tight">
-                        Welcome Back
-                    </h1>
-                    <p className="mb-8 text-xl text-blue-50/90 max-w-md mx-auto leading-relaxed font-medium drop-shadow-md">
-                        Access your student portal to manage events, track participation, and grow with SEAMS.
-                    </p>
-                </div>
+                <motion.div
+                    className="relative z-10 max-w-md"
+                    initial={{ opacity: 0, x: -40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                >
+                    {/* Logo */}
+                    <div className="flex items-center gap-3 mb-10">
+                        <img src="/gmu-logo.png" alt="GMU Logo" className="h-12 w-auto object-contain" />
+                        <span className="text-2xl font-bold text-white tracking-tight">GM University</span>
+                    </div>
 
-                {/* Overlay Gradient for depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/60 via-transparent to-blue-900/20 pointer-events-none"></div>
+                    <h1 className="text-5xl font-extrabold text-white leading-tight mb-4">
+                        Welcome <br />
+                        <span className="gradient-text">Back.</span>
+                    </h1>
+                    <p className="text-slate-400 text-lg mb-10 leading-relaxed">
+                        Track events, earn points, and build your campus profile — all in one place.
+                    </p>
+
+                    {/* Feature highlights */}
+                    <div className="space-y-4">
+                        {features.map((f, i) => (
+                            <motion.div
+                                key={i}
+                                className="flex items-center gap-4 group"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.3 + i * 0.15, duration: 0.5 }}
+                            >
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110"
+                                    style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}>
+                                    <f.icon className="w-5 h-5 text-indigo-400" />
+                                </div>
+                                <span className="text-slate-300 text-sm leading-snug">{f.text}</span>
+                            </motion.div>
+                        ))}
+                    </div>
+                </motion.div>
             </div>
 
-            {/* Right Side - Login Form */}
-            <div className="flex flex-col justify-center w-full p-8 lg:w-1/2 sm:p-12 md:p-16 lg:p-24 bg-gray-50">
-                <div className="w-full max-w-md mx-auto">
-                    <h2 className="mb-8 text-3xl font-bold text-gray-900">Sign In</h2>
-
-                    {error && <div className="p-3 mb-6 text-sm text-red-700 bg-red-100 rounded-lg">{error}</div>}
-
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-gray-700">Email or USN</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                    <User className="w-5 h-5 text-gray-400" />
-                                </div>
-                                <input
-                                    type="text"
-                                    className="w-full py-3 pl-10 pr-4 text-gray-700 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
-                                    placeholder="Enter your email or USN"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                    <Lock className="w-5 h-5 text-gray-400" />
-                                </div>
-                                <input
-                                    type="password"
-                                    className="w-full py-3 pl-10 pr-4 text-gray-700 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
-                                    placeholder="Enter your password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-end">
-                            <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">Forgot Password?</Link>
-                        </div>
-
-                        <button type="submit" className="w-full px-4 py-3 font-bold text-white transition bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            Login
-                        </button>
-                    </form>
-
-                    <div className="mt-8 text-center">
-                        <p className="text-sm text-gray-600">
-                            Don't have an account? <Link to="/register" className="font-bold text-blue-600 hover:text-blue-500">Register</Link>
-                        </p>
-                    </div>
+            {/* ─── RIGHT PANEL ─── */}
+            <div className="flex flex-col justify-center items-center w-full lg:w-1/2 p-6 sm:p-12 md:p-16 min-h-screen relative">
+                {/* Mobile logo */}
+                <div className="flex lg:hidden items-center gap-2 mb-8">
+                    <img src="/gmu-logo.png" alt="GMU Logo" className="h-9 w-auto object-contain" />
+                    <span className="text-xl font-bold text-white">GM University</span>
                 </div>
 
-                <div className="mt-auto pt-10 text-center text-xs text-gray-400">
-                    &copy; 2024 SEAMS University. All Rights Reserved. | Help Center | Terms of Service
+                <motion.div
+                    className="w-full max-w-md mx-auto"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                >
+                    <div className="glass-card-strong p-8 md:p-10">
+                        <div className="mb-8">
+                            <h2 className="text-3xl font-bold text-white mb-1">Sign In</h2>
+                            <p className="text-slate-400 text-sm">Don't have an account? <Link to="/register" className="text-indigo-400 font-semibold hover:text-indigo-300 transition-colors">Create one</Link></p>
+                        </div>
+
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mb-6 px-4 py-3 rounded-xl text-sm font-medium"
+                                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5' }}
+                            >
+                                {error}
+                            </motion.div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            {/* Email */}
+                            <div>
+                                <label className="label-dark">Email or USN</label>
+                                <div className="relative">
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                    <input
+                                        type="text"
+                                        className="input-dark input-dark-icon"
+                                        placeholder="Enter your email or USN"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Password */}
+                            <div>
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <label className="label-dark mb-0">Password</label>
+                                    <Link to="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+                                        Forgot Password?
+                                    </Link>
+                                </div>
+                                <div className="relative">
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                    <input
+                                        type="password"
+                                        className="input-dark input-dark-icon"
+                                        placeholder="Enter your password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Submit */}
+                            <motion.button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary w-full flex items-center justify-center gap-2 mt-2"
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                {loading ? (
+                                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        Sign In
+                                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                    </>
+                                )}
+                            </motion.button>
+                        </form>
+
+                        <div className="mt-6 text-center">
+                            <p className="text-xs text-slate-500">
+                                By signing in, you agree to our{' '}
+                                <span className="text-slate-400 hover:text-indigo-400 cursor-pointer transition-colors">Terms of Service</span>
+                            </p>
+                        </div>
+                    </div>
+                </motion.div>
+
+                <div className="mt-8 pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500">
+                    <p>© 2024 GM University. All Rights Reserved.</p>
+                    <div className="flex items-center gap-4">
+                    </div>
                 </div>
             </div>
         </div>

@@ -4,7 +4,9 @@ const cors = require('cors');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
-const connectDB = require('./config/db');
+const db = require('./db');
+const { requestContext } = require('./middleware/metrics');
+const { generalLimiter } = require('./middleware/limiter');
 
 dotenv.config();
 
@@ -26,6 +28,12 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+
+// ── Observability: per-request metrics tracking (response time, DB queries, cache hits)
+app.use(requestContext);
+
+// ── General rate limiter: 200 req/min per IP — broad abuse protection
+app.use('/api', generalLimiter);
 
 // Serve static files from React build (production)
 if (process.env.NODE_ENV === 'production') {
@@ -53,12 +61,11 @@ io.on('connection', (socket) => {
 
             // If coordinator, join rooms for their events
             if (role === 'coordinator' || role === 'faculty') {
-                const Event = require('./models/Event');
-                const userEvents = await Event.find({ organizer: userId });
+                const userEvents = await db('events').where({ organizer_id: userId });
 
                 userEvents.forEach(event => {
-                    socket.join(`event:${event._id}:organizer`);
-                    console.log(`Coordinator joined event:${event._id}:organizer`);
+                    socket.join(`event:${event.id}:organizer`);
+                    console.log(`Coordinator joined event:${event.id}:organizer`);
                 });
             }
 
@@ -74,16 +81,24 @@ io.on('connection', (socket) => {
     });
 });
 
-// Database Connection
-connectDB();
-
-// Health check endpoint for Render
+// PostgreSQL Connection is handled by db.js pool
+// Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         env: process.env.NODE_ENV || 'development'
     });
+});
+
+// Deep health check — verifies DB pool is alive
+app.get('/health/db', async (req, res) => {
+    try {
+        await db.raw('SELECT 1');
+        res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
+    } catch (err) {
+        res.status(503).json({ status: 'error', db: 'unreachable', error: err.message });
+    }
 });
 
 // Routes
@@ -97,12 +112,17 @@ const auditRoutes = require('./routes/auditRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 const userRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+// Import Background Jobs
+require('./jobs/recommendationJob');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // SPA fallback - serve index.html for all non-API routes (production only)
 if (process.env.NODE_ENV === 'production') {

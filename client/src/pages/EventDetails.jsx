@@ -5,7 +5,7 @@ import AuthContext from '../context/AuthContext';
 import StudentLayout from '../components/StudentLayout';
 import {
     Calendar, MapPin, User, Tag, Clock, ArrowLeft,
-    CheckCircle, AlertCircle, Share2, Award
+    CheckCircle, AlertCircle, Share2, Award, Heart
 } from 'lucide-react';
 import API_URL from '../config/api';
 
@@ -18,6 +18,7 @@ const EventDetails = () => {
     const [registering, setRegistering] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [liked, setLiked] = useState(false);
 
     useEffect(() => {
         const fetchEvent = async () => {
@@ -55,10 +56,25 @@ const EventDetails = () => {
         }
     };
 
+    const handleLike = async () => {
+        if (!user) return navigate('/login');
+        if (liked) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(`${API_URL}/api/events/${id}/like`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setLiked(true);
+        } catch (err) {
+            console.error('Like failed:', err);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
             </div>
         );
     }
@@ -66,9 +82,9 @@ const EventDetails = () => {
     if (!event) {
         return (
             <StudentLayout user={user}>
-                <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900">Event not found</h2>
-                    <button onClick={() => navigate('/events')} className="mt-4 text-blue-600 hover:underline">
+                <div className="text-center py-12 glass-card border border-white/10 max-w-lg mx-auto mt-10">
+                    <h2 className="text-2xl font-bold text-white">Event not found</h2>
+                    <button onClick={() => navigate('/events')} className="mt-4 text-indigo-400 hover:text-indigo-300 hover:underline">
                         Back to Events
                     </button>
                 </div>
@@ -85,18 +101,18 @@ const EventDetails = () => {
                 {/* Back Button */}
                 <button
                     onClick={() => navigate('/events')}
-                    className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
+                    className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
                 >
                     <ArrowLeft className="w-5 h-5 mr-2" />
                     Back to Events
                 </button>
 
-                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                <div className="glass-card shadow-xl overflow-hidden border border-white/10">
                     {/* Hero Image */}
-                    <div className="h-64 md:h-80 bg-gradient-to-r from-blue-600 to-indigo-700 relative">
+                    <div className="h-64 md:h-80 relative" style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
                         <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black to-transparent">
-                            <span className="px-3 py-1 text-xs font-bold text-white bg-blue-500 rounded-lg mb-3 inline-block">
+                        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/80 to-transparent">
+                            <span className="px-3 py-1 text-xs font-bold text-indigo-100 bg-white/20 backdrop-blur-md rounded-lg mb-3 inline-block border border-white/30">
                                 {event.category}
                             </span>
                             <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{event.title}</h1>
@@ -107,97 +123,97 @@ const EventDetails = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-8 bg-white/5">
                         {/* Main Content */}
                         <div className="md:col-span-2 space-y-8">
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-4">About Event</h3>
-                                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                <h3 className="text-xl font-bold text-white mb-4">About Event</h3>
+                                <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
                                     {event.description}
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-blue-50 p-4 rounded-xl">
+                                <div className="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-xl">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                                        <div className="p-2 bg-indigo-500/20 border border-indigo-500/30 rounded-lg text-indigo-400">
                                             <Award className="w-5 h-5" />
                                         </div>
-                                        <span className="font-semibold text-gray-900">Points</span>
+                                        <span className="font-semibold text-white">Points</span>
                                     </div>
-                                    <p className="text-2xl font-bold text-blue-600">{event.points} Credits</p>
+                                    <p className="text-2xl font-bold text-indigo-400">{event.points} Credits</p>
                                 </div>
-                                <div className="bg-purple-50 p-4 rounded-xl">
+                                <div className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-xl">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                                        <div className="p-2 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-400">
                                             <User className="w-5 h-5" />
                                         </div>
-                                        <span className="font-semibold text-gray-900">Organizer</span>
+                                        <span className="font-semibold text-white">Organizer</span>
                                     </div>
-                                    <p className="text-lg font-bold text-purple-600 truncate">{event.organizer || 'College'}</p>
+                                    <p className="text-lg font-bold text-purple-400 truncate">{event.organizer || 'College'}</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Sidebar / Actions */}
                         <div className="space-y-6">
-                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                                <h3 className="font-bold text-gray-900 mb-4">Event Details</h3>
+                            <div className="bg-white/5 p-6 border border-white/10 rounded-2xl">
+                                <h3 className="font-bold text-white mb-4">Event Details</h3>
                                 <ul className="space-y-4 text-sm">
                                     <li className="flex items-start">
-                                        <Calendar className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                                        <Calendar className="w-5 h-5 text-indigo-400 mr-3 mt-0.5" />
                                         <div>
-                                            <span className="block font-medium text-gray-900">Date</span>
-                                            <span className="text-gray-500">{new Date(event.date).toLocaleDateString()}</span>
+                                            <span className="block font-medium text-white">Date</span>
+                                            <span className="text-gray-400">{new Date(event.date).toLocaleDateString()}</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start">
-                                        <Clock className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                                        <Clock className="w-5 h-5 text-indigo-400 mr-3 mt-0.5" />
                                         <div>
-                                            <span className="block font-medium text-gray-900">Time</span>
-                                            <span className="text-gray-500">{new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="block font-medium text-white">Time</span>
+                                            <span className="text-gray-400">{new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
                                     </li>
                                     <li className="flex items-start">
-                                        <MapPin className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                                        <MapPin className="w-5 h-5 text-indigo-400 mr-3 mt-0.5" />
                                         <div>
-                                            <span className="block font-medium text-gray-900">Venue</span>
-                                            <span className="text-gray-500">{event.venue}</span>
+                                            <span className="block font-medium text-white">Venue</span>
+                                            <span className="text-gray-400">{event.venue}</span>
                                         </div>
                                     </li>
                                 </ul>
 
-                                <hr className="my-6 border-gray-200" />
+                                <hr className="my-6 border-white/10" />
 
                                 {success && (
-                                    <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm flex items-start">
+                                    <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-lg text-sm flex items-start">
                                         <CheckCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                                         {success}
                                     </div>
                                 )}
 
                                 {error && (
-                                    <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm flex items-start">
+                                    <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 text-red-300 rounded-lg text-sm flex items-start">
                                         <AlertCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                                         {error}
                                     </div>
                                 )}
 
                                 {isEventOver ? (
-                                    <button disabled className="w-full py-3 px-4 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed">
+                                    <button disabled className="w-full py-3 px-4 bg-white/5 border border-white/10 text-gray-500 font-bold rounded-xl cursor-not-allowed">
                                         Event Ended
                                     </button>
                                 ) : isRegistrationClosed ? (
-                                    <button disabled className="w-full py-3 px-4 bg-red-50 text-red-400 font-bold rounded-xl cursor-not-allowed">
+                                    <button disabled className="w-full py-3 px-4 bg-red-500/10 border border-red-500/20 text-red-400 font-bold rounded-xl cursor-not-allowed">
                                         Registration Closed
                                     </button>
                                 ) : (
                                     <button
                                         onClick={handleRegister}
                                         disabled={registering || success}
-                                        className={`w-full py-3 px-4 font-bold rounded-xl text-white shadow-lg shadow-blue-200 transition-all transform hover:scale-[1.02] ${success
-                                            ? 'bg-green-500 hover:bg-green-600'
-                                            : 'bg-blue-600 hover:bg-blue-700'
+                                        className={`w-full py-3 px-4 font-bold rounded-xl text-white transition-all transform hover:scale-[1.02] ${success
+                                            ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
+                                            : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 border border-indigo-400/30 shadow-glow'
                                             }`}
                                     >
                                         {registering ? 'Registering...' : success ? 'Registered' : 'Register Now'}
@@ -205,9 +221,23 @@ const EventDetails = () => {
                                 )}
                             </div>
 
-                            <button className="w-full flex items-center justify-center py-3 px-4 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition-colors">
-                                <Share2 className="w-4 h-4 mr-2" />
+                            <button className="w-full flex items-center justify-center py-3 px-4 border border-white/10 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white font-medium transition-colors">
+                                <Share2 className="w-4 h-4 mr-2 text-indigo-400" />
                                 Share Event
+                            </button>
+
+                            <button
+                                onClick={handleLike}
+                                disabled={liked}
+                                className={`w-full flex items-center justify-center py-3 px-4 border rounded-xl font-medium transition-all group ${liked
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                                    : 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'
+                                    }`}
+                            >
+                                <motion.div animate={liked ? { scale: [1, 1.4, 1] } : {}}>
+                                    <Tag className={`w-4 h-4 mr-2 ${liked ? 'fill-red-500 text-red-500' : 'text-red-400 group-hover:text-red-300'}`} />
+                                </motion.div>
+                                {liked ? 'Liked' : 'Like Event'}
                             </button>
                         </div>
                     </div>

@@ -1,40 +1,24 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
-import { Eye, EyeOff, Layers } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Sparkles, User, Mail, Hash, Phone, BookOpen, GraduationCap } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const Register = () => {
     const [formData, setFormData] = useState({
         name: '',
         usn: '',
-        branch: 'Computer Science', // Default
-        year: '1st Year', // Default
+        branch: '',
+        year: '',
         phone: '',
         password: '',
-        email: '' // Still needed for backend, maybe derive from USN or ask? 
-        // The mock doesn't show Email field.
-        // But backend requires Email.
-        // Maybe "Email or USN" in login implies USN can be used for login?
-        // But backend `loginUser` uses `findOne({ email })`.
-        // So I MUST have an email.
-        // I will add an Email field to the form, or derive it if possible (e.g. usn@college.edu).
-        // The user said "create account ko bhi isstarah create karo" (make create account like this too).
-        // The image DOES NOT show Email.
-        // This is a gap.
-        // I will add Email field to be safe, or I'll ask the user?
-        // User said "isstarah" (like this).
-        // If I omit Email, registration will fail.
-        // I will add Email field. It's standard.
-        // Or maybe the "USN" field in the image IS the identifier?
-        // But backend `User` model has `email: { required: true }`.
-        // I'll add Email field. It's better to be functional.
-        // I'll place it after Name.
+        email: '',
     });
-
     const [showPassword, setShowPassword] = useState(false);
     const { register } = useContext(AuthContext);
     const navigate = useNavigate();
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -42,24 +26,13 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Map Year to Semester (approx)
-        const semesterMap = {
-            '1st Year': '1',
-            '2nd Year': '3',
-            '3rd Year': '5',
-            '4th Year': '7'
-        };
-
-        const payload = {
-            ...formData,
-            semester: semesterMap[formData.year] || '1',
-            role: 'student' // Default to student
-        };
-
+        setLoading(true);
+        setError('');
+        const semesterMap = { '1st Year': '1', '2nd Year': '3', '3rd Year': '5', '4th Year': '7' };
+        const payload = { ...formData, semester: semesterMap[formData.year] || '1', role: 'student' };
         const result = await register(payload);
+        setLoading(false);
         if (result.success) {
-            // Show success message and redirect to login
-            setError(''); // Clear any previous errors
             alert(result.message || 'Registration successful! Please check your email to verify your account.');
             navigate('/login');
         } else {
@@ -68,152 +41,184 @@ const Register = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl">
-                <div className="text-center">
-                    <div className="mx-auto h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-                        <Layers className="h-8 w-8 text-indigo-600" />
+        <div className="flex min-h-screen page-bg overflow-hidden">
+            {/* ─── LEFT PANEL ─── */}
+            <div className="hidden lg:flex w-2/5 relative flex-col justify-center items-center p-12 overflow-hidden">
+                <div className="ambient-blob w-72 h-72 bg-violet-600/25 top-[-10%] left-[-15%] animate-blob" />
+                <div className="ambient-blob w-80 h-80 bg-indigo-600/20 bottom-[0%] right-[-10%] animate-blob-2" />
+                <div className="ambient-blob w-56 h-56 bg-pink-500/15 top-[45%] left-[10%] animate-blob-3" />
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%236366F1%22 fill-opacity=%220.04%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
+
+                <motion.div
+                    className="relative z-10 max-w-sm"
+                    initial={{ opacity: 0, x: -40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8 }}
+                >
+                    <div className="flex items-center gap-3 mb-10">
+                        <img src="/gmu-logo.png" alt="GMU Logo" className="h-12 w-auto object-contain" />
+                        <span className="text-2xl font-bold text-white">GM University</span>
                     </div>
-                    <h2 className="text-3xl font-extrabold text-gray-900">SEAMS</h2>
-                    <h3 className="mt-2 text-xl font-bold text-gray-900">Create an Account</h3>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Track your activities and engagement across campus.
+                    <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
+                        Join the <br /><span className="gradient-text">Community.</span>
+                    </h1>
+                    <p className="text-slate-400 text-base leading-relaxed mb-8">
+                        Create your student profile and start participating in campus activities, workshops, and events.
                     </p>
+                    {/* Decorative steps */}
+                    {['Create your account', 'Verify your email', 'Start exploring events'].map((step, i) => (
+                        <motion.div
+                            key={i}
+                            className="flex items-center gap-3 mb-4"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 + i * 0.15 }}
+                        >
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                                style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
+                                {i + 1}
+                            </div>
+                            <span className="text-slate-400 text-sm">{step}</span>
+                        </motion.div>
+                    ))}
+                </motion.div>
+            </div>
+
+            {/* ─── RIGHT PANEL ─── */}
+            <div className="flex flex-col justify-center w-full lg:w-3/5 p-6 sm:p-10 overflow-y-auto">
+                {/* Mobile logo */}
+                <div className="flex lg:hidden items-center gap-2 mb-6">
+                    <img src="/gmu-logo.png" alt="GMU Logo" className="h-9 w-auto object-contain" />
+                    <span className="text-xl font-bold text-white">GM University</span>
                 </div>
 
-                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">{error}</div>}
-
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name</label>
-                            <input
-                                id="name"
-                                name="name"
-                                type="text"
-                                required
-                                className="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Enter your full name"
-                                value={formData.name}
-                                onChange={handleChange}
-                            />
+                <motion.div
+                    className="w-full max-w-xl mx-auto"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7 }}
+                >
+                    <div className="glass-card-strong p-8 md:p-10">
+                        <div className="mb-7">
+                            <h2 className="text-2xl font-bold text-white mb-1">Create Account</h2>
+                            <p className="text-slate-400 text-sm">Already have an account? <Link to="/login" className="text-indigo-400 font-semibold hover:text-indigo-300 transition-colors">Sign In</Link></p>
                         </div>
 
-                        {/* Added Email field because backend requires it */}
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                required
-                                className="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Enter your email"
-                                value={formData.email}
-                                onChange={handleChange}
-                            />
-                        </div>
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mb-5 px-4 py-3 rounded-xl text-sm font-medium"
+                                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5' }}
+                            >
+                                {error}
+                            </motion.div>
+                        )}
 
-                        <div>
-                            <label htmlFor="usn" className="block text-sm font-medium text-gray-700">USN (University Serial Number)</label>
-                            <input
-                                id="usn"
-                                name="usn"
-                                type="text"
-                                required
-                                className="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Enter your USN"
-                                value={formData.usn}
-                                onChange={handleChange}
-                            />
-                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Row 1: Name + Email */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="label-dark">Full Name</label>
+                                    <div className="relative">
+                                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                        <input name="name" type="text" required className="input-dark input-dark-icon" placeholder="Your full name" value={formData.name} onChange={handleChange} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="label-dark">Email Address</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                        <input name="email" type="email" required className="input-dark input-dark-icon" placeholder="you@college.edu" value={formData.email} onChange={handleChange} />
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                            {/* Row 2: USN + Phone */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="label-dark">USN</label>
+                                    <div className="relative">
+                                        <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                        <input name="usn" type="text" required className="input-dark input-dark-icon" placeholder="e.g. 1RV19CS001" value={formData.usn} onChange={handleChange} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="label-dark">Phone Number</label>
+                                    <div className="relative">
+                                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                        <input name="phone" type="tel" className="input-dark input-dark-icon" placeholder="10-digit number" value={formData.phone} onChange={handleChange} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Row 3: Branch + Year */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="label-dark">Branch</label>
+                                    <div className="relative">
+                                        <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none z-10" />
+                                        <select name="branch" className="select-dark input-dark-icon" style={{ colorScheme: 'dark' }} value={formData.branch} onChange={handleChange} required>
+                                            <option value="" disabled hidden>Select Branch</option>
+                                            <option value="Computer Science">Computer Science</option>
+                                            <option value="Information Science">Information Science</option>
+                                            <option value="Electronics">Electronics</option>
+                                            <option value="Mechanical">Mechanical</option>
+                                            <option value="Civil">Civil</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="label-dark">Year</label>
+                                    <div className="relative">
+                                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none z-10" />
+                                        <select name="year" className="select-dark input-dark-icon" style={{ colorScheme: 'dark' }} value={formData.year} onChange={handleChange} required>
+                                            <option value="" disabled hidden>Select Year</option>
+                                            <option value="1st Year">1st Year</option>
+                                            <option value="2nd Year">2nd Year</option>
+                                            <option value="3rd Year">3rd Year</option>
+                                            <option value="4th Year">4th Year</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Password */}
                             <div>
-                                <label htmlFor="branch" className="block text-sm font-medium text-gray-700">Branch</label>
-                                <select
-                                    id="branch"
-                                    name="branch"
-                                    className="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg"
-                                    value={formData.branch}
-                                    onChange={handleChange}
-                                >
-                                    <option>Computer Science</option>
-                                    <option>Information Science</option>
-                                    <option>Electronics</option>
-                                    <option>Mechanical</option>
-                                    <option>Civil</option>
-                                </select>
+                                <label className="label-dark">Password</label>
+                                <div className="relative">
+                                    <input
+                                        name="password" type={showPassword ? 'text' : 'password'} required
+                                        className="input-dark pr-11" placeholder="Create a strong password"
+                                        value={formData.password} onChange={handleChange}
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
-                                <select
-                                    id="year"
-                                    name="year"
-                                    className="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg"
-                                    value={formData.year}
-                                    onChange={handleChange}
-                                >
-                                    <option>1st Year</option>
-                                    <option>2nd Year</option>
-                                    <option>3rd Year</option>
-                                    <option>4th Year</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                            <input
-                                id="phone"
-                                name="phone"
-                                type="tel"
-                                className="mt-1 appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="Enter your phone number"
-                                value={formData.phone}
-                                onChange={handleChange}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                            <div className="relative mt-1">
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type={showPassword ? "text" : "password"}
-                                    required
-                                    className="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm pr-10"
-                                    placeholder="Enter your password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                >
-                                    {showPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
-                                </button>
-                            </div>
-                        </div>
+                            <motion.button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary w-full flex items-center justify-center gap-2 mt-2"
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                {loading ? (
+                                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>Create Account <ArrowRight className="w-4 h-4" /></>
+                                )}
+                            </motion.button>
+                        </form>
                     </div>
+                </motion.div>
 
-                    <div>
-                        <button
-                            type="submit"
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                            Create Account
-                        </button>
-                    </div>
-
-                    <div className="text-center mt-4">
-                        <p className="text-sm text-gray-600">
-                            Already have an account? <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">Sign In</Link>
-                        </p>
-                    </div>
-                </form>
+                <div className="mt-6 text-center text-xs text-slate-600">
+                    © 2024 GM University. All Rights Reserved.
+                </div>
             </div>
         </div>
     );

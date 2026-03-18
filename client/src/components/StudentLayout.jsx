@@ -2,12 +2,13 @@ import { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import {
-    Menu, X, Search, Bell, User, TrendingUp, Award, Calendar,
-    Trophy, GraduationCap, LogOut
+    Menu, X, Search, Bell, TrendingUp, Award, Calendar,
+    Trophy, GraduationCap, LogOut, Sparkles, ChevronRight, QrCode
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const StudentLayout = ({ children, title, user }) => {
-    const { logout } = useContext(AuthContext);
+const StudentLayout = ({ children, title }) => {
+    const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -16,117 +17,164 @@ const StudentLayout = ({ children, title, user }) => {
         { name: 'Dashboard', icon: TrendingUp, path: '/' },
         { name: 'Events', icon: Calendar, path: '/events' },
         { name: 'My Activities', icon: Award, path: '/my-activities' },
+        { name: 'Scan QR', icon: QrCode, path: '/scan-qr' },
         { name: 'Leaderboard', icon: Trophy, path: '/leaderboard' },
-        { name: 'Profile', icon: User, path: '/profile' },
+        { name: 'Profile', icon: GraduationCap, path: '/profile' },
     ];
 
+    const handleLogout = () => { logout(); navigate('/login'); };
+
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Top Navbar */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50">
-                <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="min-h-screen page-bg flex">
+            {/* ─── Mobile Navbar ─── */}
+            <nav className="nav-dark sticky top-0 z-40 lg:hidden w-full">
+                <div className="px-4 mx-auto w-full sm:px-6">
                     <div className="flex justify-between items-center h-16">
-                        {/* Left: Logo + Menu Button */}
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setMenuOpen(!menuOpen)}
-                                className="p-2 rounded-lg hover:bg-gray-100"
-                            >
-                                {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                            <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 rounded-xl hover:bg-white/5 text-slate-400 hover:text-white transition-all">
+                                {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                             </button>
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-                                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                                    <GraduationCap className="w-5 h-5 text-white" />
-                                </div>
-                                <h1 className="text-xl font-bold text-gray-900">SEAMS</h1>
+                            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+                                <img src="/gmu-logo.png" alt="GMU Logo" className="h-8 w-auto object-contain" />
+                                <span className="text-lg font-bold text-white hidden sm:block">GM University</span>
                             </div>
                         </div>
-
-                        {/* Center: Search Bar (Optional, can be passed as prop or global) */}
-                        <div className="hidden md:flex flex-1 max-w-md mx-8">
-                            <div className="relative w-full">
-                                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search events, activities..."
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Right: Notifications + Profile */}
-                        <div className="flex items-center gap-4">
-                            <button className="p-2 rounded-lg hover:bg-gray-100 relative">
-                                <Bell className="w-6 h-6 text-gray-600" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        <div className="flex items-center gap-2">
+                            <button className="p-2 rounded-xl hover:bg-white/5 relative text-slate-400 hover:text-white transition-all">
+                                <Bell className="w-5 h-5" />
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full ring-1 ring-dark-400" />
                             </button>
-                            <button onClick={() => navigate('/profile')} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100">
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <span className="text-blue-600 font-semibold text-sm">{user?.name?.[0]?.toUpperCase()}</span>
-                                </div>
+                            <button onClick={() => navigate('/profile')} className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white hover:bg-white/5 transition-all" style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
+                                {user?.name?.[0]?.toUpperCase()}
                             </button>
                         </div>
                     </div>
                 </div>
             </nav>
 
-            {/* Side Menu Overlay */}
-            {menuOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setMenuOpen(false)}>
-                    <div
-                        className="bg-white w-64 h-full shadow-xl transform transition-transform duration-300 ease-in-out"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="p-6 flex flex-col h-full">
-                            <div className="mb-8 flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                                    <GraduationCap className="w-6 h-6 text-white" />
+            {/* ─── Desktop Fixed Sidebar ─── */}
+            <aside className="fixed left-0 top-0 bottom-0 w-64 z-50 hidden lg:flex flex-col" style={{ background: 'rgba(11,15,26,0.95)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="h-20 flex items-center gap-3 px-6 border-b cursor-pointer" style={{ borderColor: 'rgba(255,255,255,0.06)' }} onClick={() => navigate('/')}>
+                    <img src="/gmu-logo.png" alt="GMU Logo" className="h-9 w-auto object-contain" />
+                    <span className="text-lg font-bold text-white tracking-wide">GM University</span>
+                </div>
+                
+                <div className="flex-1 py-6 px-4 overflow-y-auto space-y-1 custom-scrollbar">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-4">Navigation</p>
+                    {menuItems.map((item) => {
+                        const active = location.pathname === item.path;
+                        return (
+                            <button key={item.name} onClick={() => navigate(item.path)} className={`nav-item ${active ? 'active' : ''}`}>
+                                <item.icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-indigo-400' : 'text-slate-400'}`} />
+                                <span className="font-medium text-sm flex-1">{item.name}</span>
+                                {active && <ChevronRight className="w-4 h-4 opacity-60" />}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <div className="flex items-center gap-3 mb-4 px-2">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
+                            {user?.name?.[0]?.toUpperCase()}
+                        </div>
+                        <div className="overflow-hidden flex-1 cursor-pointer" onClick={() => navigate('/profile')}>
+                            <p className="text-sm font-semibold text-white truncate hover:text-indigo-300 transition-colors">{user?.name}</p>
+                            <p className="text-xs text-slate-400 truncate">{user?.usn || user?.email}</p>
+                        </div>
+                    </div>
+                    <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all group" style={{ color: 'rgba(252,165,165,0.8)', background: 'rgba(239,68,68,0.05)' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.05)'}>
+                        <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        Sign Out
+                    </button>
+                </div>
+            </aside>
+
+            {/* ─── Mobile Sidebar Drawer ─── */}
+            <AnimatePresence>
+                {menuOpen && (
+                    <>
+                        <motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenuOpen(false)} />
+                        <motion.div className="fixed left-0 top-0 bottom-0 w-72 z-50 flex flex-col lg:hidden" style={{ background: 'rgba(11,15,26,0.95)', backdropFilter: 'blur(24px)', borderRight: '1px solid rgba(255,255,255,0.06)' }} initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}>
+                            <div className="p-6 flex items-center justify-between border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <img src="/gmu-logo.png" alt="GMU Logo" className="h-9 w-auto object-contain" />
+                                    <span className="text-lg font-bold text-white">GM University</span>
                                 </div>
-                                <span className="text-xl font-bold text-gray-900">SEAMS</span>
+                                <button onClick={() => setMenuOpen(false)} className="p-1 text-slate-500 hover:text-white transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            <div className="mb-6">
-                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Menu</h3>
-                                <nav className="space-y-2">
-                                    {menuItems.map((item) => (
-                                        <button
-                                            key={item.name}
-                                            onClick={() => { navigate(item.path); setMenuOpen(false); }}
-                                            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${location.pathname === item.path
-                                                    ? 'bg-blue-50 text-blue-600 font-medium'
-                                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                                }`}
-                                        >
-                                            <item.icon className={`w-5 h-5 ${location.pathname === item.path ? 'text-blue-600' : 'text-gray-400'}`} />
-                                            {item.name}
-                                        </button>
-                                    ))}
+                            <div className="p-4 mx-4 mt-4 rounded-xl cursor-pointer" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }} onClick={() => { navigate('/profile'); setMenuOpen(false); }}>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
+                                        {user?.name?.[0]?.toUpperCase()}
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+                                        <p className="text-xs text-slate-400">{user?.usn || user?.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 py-4 px-3 overflow-y-auto">
+                                <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 mb-3">Navigation</p>
+                                <nav className="space-y-1">
+                                    {menuItems.map((item) => {
+                                        const active = location.pathname === item.path;
+                                        return (
+                                            <button key={item.name} onClick={() => { navigate(item.path); setMenuOpen(false); }} className={`nav-item ${active ? 'active' : ''}`}>
+                                                <item.icon className="w-4.5 h-4.5 flex-shrink-0" />
+                                                <span className="font-medium text-sm flex-1 text-left">{item.name}</span>
+                                                {active && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
+                                            </button>
+                                        );
+                                    })}
                                 </nav>
                             </div>
 
-                            <div className="mt-auto pt-6 border-t border-gray-100">
-                                <button
-                                    onClick={() => { logout(); setMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-3 transition-colors"
-                                >
-                                    <LogOut className="w-5 h-5" />
-                                    Logout
+                            <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                                <button onClick={() => { handleLogout(); setMenuOpen(false); }} className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium" style={{ color: 'rgba(252,165,165,0.8)', background: 'rgba(239,68,68,0.05)' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.05)'}>
+                                    <LogOut className="w-4 h-4" />
+                                    Sign Out
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Main Content */}
-            <main className="py-8 px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                {title && (
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-                    </div>
+                        </motion.div>
+                    </>
                 )}
-                {children}
-            </main>
+            </AnimatePresence>
+
+            {/* ─── Main Content Wrapper ─── */}
+            <div className="lg:ml-64 flex flex-col min-h-screen w-full">
+                {/* Desktop Header */}
+                <header className="hidden lg:flex items-center justify-between h-20 px-8 sticky top-0 z-30 border-b" style={{ background: 'rgba(11,15,26,0.8)', backdropFilter: 'blur(12px)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <h1 className="text-2xl font-bold tracking-tight text-white">{title || 'Dashboard'}</h1>
+                    
+                    <div className="flex items-center gap-6">
+                        {/* Search */}
+                        <div className="relative w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <input type="text" placeholder="Search events..." className="w-full pl-9 pr-4 py-2 text-sm rounded-xl input-dark" />
+                        </div>
+                        
+                        <button className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                            <Bell className="w-5 h-5" />
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-slate-900 border-none"></span>
+                        </button>
+                    </div>
+                </header>
+
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-full">
+                    {/* Render title on mobile only, since desktop has header */}
+                    {title && (
+                        <div className="lg:hidden mb-6">
+                            <h1 className="text-2xl font-bold tracking-tight text-white">{title}</h1>
+                        </div>
+                    )}
+                    {children}
+                </main>
+            </div>
         </div>
     );
 };

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Layers } from 'lucide-react';
+import { Sparkles, Mail, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import API_URL from '../config/api';
+import { motion } from 'framer-motion';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
@@ -25,95 +26,104 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="min-h-screen bg-indigo-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="flex justify-center">
-                    <Layers className="h-12 w-12 text-indigo-600" />
-                </div>
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                    SEAMS
-                </h2>
-                <p className="mt-2 text-center text-sm text-gray-600">
-                    Student Engagement & Activity Management System
-                </p>
-            </div>
+        <div className="min-h-screen page-bg flex flex-col justify-center items-center p-6 relative overflow-hidden">
+            {/* Ambient blobs */}
+            <div className="ambient-blob w-96 h-96 bg-indigo-600/20 top-[-10%] left-[-10%] animate-blob" />
+            <div className="ambient-blob w-80 h-80 bg-purple-600/15 bottom-[0%] right-[-10%] animate-blob-2" />
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            {/* Logo */}
+            <motion.div
+                className="flex items-center gap-3 mb-8"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+            >
+                <img src="/gmu-logo.png" alt="GMU Logo" className="h-10 w-auto object-contain" />
+                <span className="text-xl font-bold text-white">GM University</span>
+            </motion.div>
+
+            <motion.div
+                className="w-full max-w-md"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7 }}
+            >
+                <div className="glass-card-strong p-8 md:p-10">
                     {!submitted ? (
                         <>
-                            <div className="text-center mb-6">
-                                <h3 className="text-2xl font-bold text-gray-900">Forgot Password?</h3>
-                                <p className="mt-2 text-sm text-gray-600">
-                                    Enter the email address or USN associated with your account, and we'll send you a link to reset your password.
+                            <div className="mb-7">
+                                <h2 className="text-2xl font-bold text-white mb-2">Forgot Password?</h2>
+                                <p className="text-slate-400 text-sm leading-relaxed">
+                                    Enter the email associated with your account and we'll send you a reset link.
                                 </p>
                             </div>
 
-                            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">{error}</div>}
+                            {error && (
+                                <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium"
+                                    style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5' }}>
+                                    {error}
+                                </div>
+                            )}
 
-                            <form className="space-y-6" onSubmit={handleSubmit}>
+                            <form onSubmit={handleSubmit} className="space-y-5">
                                 <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                        Email Address / USN
-                                    </label>
-                                    <div className="mt-1">
+                                    <label className="label-dark">Email Address / USN</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
                                         <input
-                                            id="email"
-                                            name="email"
                                             type="text"
                                             required
-                                            className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                            placeholder="e.g., yourname@university.edu or 1UN21CS001"
+                                            className="input-dark input-dark-icon"
+                                            placeholder="yourname@university.edu or USN"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                         />
                                     </div>
                                 </div>
 
-                                <div>
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        {loading ? 'Sending...' : 'Send Reset Link'}
-                                    </button>
-                                </div>
+                                <motion.button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="btn-primary w-full flex items-center justify-center gap-2"
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    {loading ? (
+                                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <>Send Reset Link <ArrowRight className="w-4 h-4" /></>
+                                    )}
+                                </motion.button>
                             </form>
                         </>
                     ) : (
-                        <div className="text-center">
-                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                </svg>
+                        <motion.div
+                            className="text-center py-4"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.4 }}
+                        >
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
+                                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                                <CheckCircle className="w-8 h-8 text-emerald-400" />
                             </div>
-                            <h3 className="text-lg leading-6 font-medium text-gray-900">Reset Link Sent!</h3>
-                            <p className="mt-2 text-sm text-gray-500">
+                            <h3 className="text-xl font-bold text-white mb-2">Reset Link Sent!</h3>
+                            <p className="text-slate-400 text-sm">
                                 Check your email for instructions to reset your password.
                             </p>
-                        </div>
+                        </motion.div>
                     )}
 
-                    <div className="mt-6">
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-300" />
-                            </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">
-                                    Or
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 text-center">
-                            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                                Back to Login
-                            </Link>
-                        </div>
+                    <div className="mt-6 pt-5 border-t text-center" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                        <Link to="/login" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-400 transition-colors font-medium">
+                            <ArrowLeft className="w-4 h-4" /> Back to Sign In
+                        </Link>
                     </div>
                 </div>
+            </motion.div>
+
+            <div className="mt-8 text-center text-xs text-slate-600">
+                © 2024 GM University. All Rights Reserved.
             </div>
         </div>
     );

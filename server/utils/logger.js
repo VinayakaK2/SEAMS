@@ -1,8 +1,8 @@
-const AuditLog = require('../models/AuditLog');
+const db = require('../db');
 
 const logActivity = async (action, performedBy, targetId, targetType, details, req) => {
     try {
-        await AuditLog.create({
+        await db('audit_logs').insert({
             action,
             performedBy,
             targetId,

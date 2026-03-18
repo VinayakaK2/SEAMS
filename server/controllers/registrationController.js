@@ -1,7 +1,27 @@
-const Registration = require('../models/Registration');
-const Event = require('../models/Event');
-const User = require('../models/User');
+const db = require('../db');
 const logActivity = require('../utils/logger');
+const { updateUserTagProfile } = require('../utils/tagProfileUpdater');
+
+/**
+ * Record user activity for recommendation engine
+ */
+const recordActivity = async (userId, eventId, action) => {
+    try {
+        if (!userId || !eventId) return;
+        await db('user_activity').insert({
+            user_id: userId,
+            event_id: eventId,
+            action,
+            timestamp: db.fn.now()
+        });
+
+        // V3: Incrementally update user's semantic learning profile
+        await updateUserTagProfile(userId, eventId, action);
+        
+    } catch (error) {
+        console.error('recordActivity error:', error.message);
+    }
+};
 
 // @desc    Register for an event
 // @route   POST /api/registrations
@@ -9,54 +29,66 @@ const logActivity = require('../utils/logger');
 const registerForEvent = async (req, res) => {
     try {
         const { eventId } = req.body;
-        const studentId = req.user._id;
+        const studentId = req.user.id || req.user._id;
 
-        const event = await Event.findById(eventId);
-        if (!event) {
-            return res.status(404).json({ message: 'Event not found' });
-        }
+        const registration = await db.transaction(async trx => {
+            const event = await trx('events').where({ id: eventId }).first();
+            
+            if (!event) {
+                throw new Error('Event not found');
+            }
 
-        if (event.maxParticipants && event.registeredCount >= event.maxParticipants) {
-            return res.status(400).json({ message: 'Event is full' });
-        }
+            if (event.maxParticipants && event.registeredCount >= event.maxParticipants) {
+                throw new Error('Event is full');
+            }
 
-        const existingReg = await Registration.findOne({ student: studentId, event: eventId });
-        if (existingReg) {
-            return res.status(400).json({ message: 'Already registered' });
-        }
+            const existingReg = await trx('registrations').where({ student_id: studentId, event_id: eventId }).first();
+            if (existingReg) {
+                throw new Error('Already registered');
+            }
 
-        const registration = await Registration.create({
-            student: studentId,
-            event: eventId,
+            const [reg] = await trx('registrations').insert({
+                student_id: studentId,
+                event_id: eventId,
+                status: 'registered'
+            }).returning('*');
+
+            // Increment registered count
+            await trx('events').where({ id: eventId }).increment('registeredCount', 1);
+            
+            reg._id = reg.id;
+            return { reg, event };
         });
 
-        event.registeredCount += 1;
-        await event.save();
+        await logActivity('REGISTER_EVENT', studentId, registration.reg.id.toString(), 'Registration', { event: registration.event.title }, req);
 
-        await logActivity('REGISTER_EVENT', studentId, registration._id, 'Registration', { event: event.title }, req);
+        // Record Activity for Recommendation Engine
+        await recordActivity(studentId, eventId, 'register');
 
         // Emit socket event to event organizer and admins
         if (req.io) {
-            const populatedReg = await Registration.findById(registration._id).populate('student', 'name email usn');
+            const student = await db('users').where({ id: studentId }).select('id as _id', 'name', 'email', 'usn').first();
+            const populatedReg = { ...registration.reg, student };
+
             const updatePayload = {
                 event: {
-                    _id: event._id,
-                    title: event.title,
-                    registeredCount: event.registeredCount
+                    _id: registration.event.id,
+                    title: registration.event.title,
+                    registeredCount: registration.event.registeredCount + 1
                 },
                 registration: populatedReg,
-                participantCount: event.registeredCount
+                participantCount: registration.event.registeredCount + 1
             };
 
-            // Notify event organizer
             req.io.to(`event:${eventId}:organizer`).emit('registration_created', updatePayload);
-
-            // Notify all admins
             req.io.to('room:admin').emit('registration_created', updatePayload);
         }
 
-        res.status(201).json(registration);
+        res.status(201).json(registration.reg);
     } catch (error) {
+        if (['Event not found', 'Event is full', 'Already registered'].includes(error.message)) {
+            return res.status(error.message === 'Event not found' ? 404 : 400).json({ message: error.message });
+        }
         res.status(400).json({ message: 'Registration failed', error: error.message });
     }
 };
@@ -67,36 +99,42 @@ const registerForEvent = async (req, res) => {
 const verifyAttendance = async (req, res) => {
     try {
         const { qrToken, studentId } = req.body;
-        // This logic assumes Coordinator scans Student QR or something similar.
-        // But for now, let's keep it consistent with previous implementation if needed.
-        // However, the new requirement is Student scans Event QR.
-        // So this endpoint might be for manual verification or different flow.
-        // I'll keep it as is.
-
         const eventId = qrToken.split('-')[0];
-        const event = await Event.findById(eventId);
+        const verifierId = req.user.id || req.user._id;
 
-        if (!event) return res.status(404).json({ message: 'Invalid QR Code' });
-        if (!event.qrActive) return res.status(400).json({ message: 'QR Code is not active' });
-        if (new Date() > event.qrExpiresAt) return res.status(400).json({ message: 'QR Code expired' });
+        const result = await db.transaction(async trx => {
+            const event = await trx('events').where({ id: eventId }).first();
 
-        const registration = await Registration.findOne({ student: studentId, event: eventId });
-        if (!registration) return res.status(404).json({ message: 'Student not registered' });
-        if (registration.status === 'verified') return res.status(400).json({ message: 'Already verified' });
+            if (!event) throw new Error('Invalid QR Code');
+            if (!event.qrActive) throw new Error('QR Code is not active');
+            if (new Date() > new Date(event.qrExpiresAt)) throw new Error('QR Code expired');
 
-        registration.status = 'verified';
-        registration.attendedAt = Date.now();
-        registration.verifiedBy = req.user._id;
-        await registration.save();
+            const registration = await trx('registrations').where({ student_id: studentId, event_id: eventId }).first();
+            if (!registration) throw new Error('Student not registered');
+            if (registration.status === 'verified') throw new Error('Already verified');
 
-        const student = await User.findById(studentId);
-        student.credits += event.points;
-        await student.save();
+            const [updatedReg] = await trx('registrations').where({ id: registration.id }).update({
+                status: 'verified',
+                attendedAt: trx.fn.now(),
+                verifiedBy: verifierId
+            }).returning('*');
 
-        await logActivity('VERIFY_ATTENDANCE', req.user._id, registration._id, 'Registration', { student: student.name, event: event.title }, req);
+            await trx('users').where({ id: studentId }).increment('credits', event.points);
 
-        res.json({ message: 'Verified', student: student.name, credits: event.points });
+            const student = await trx('users').where({ id: studentId }).select('name').first();
+
+            return { event, updatedReg, student };
+        });
+
+        await logActivity('VERIFY_ATTENDANCE', verifierId, result.updatedReg.id.toString(), 'Registration', { student: result.student.name, event: result.event.title }, req);
+
+        res.json({ message: 'Verified', student: result.student.name, credits: result.event.points });
     } catch (error) {
+        if (['Invalid QR Code', 'Student not registered'].includes(error.message)) {
+            return res.status(404).json({ message: error.message });
+        } else if (['QR Code is not active', 'QR Code expired', 'Already verified'].includes(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Verification failed', error: error.message });
     }
 };
@@ -107,33 +145,43 @@ const verifyAttendance = async (req, res) => {
 const verifyAttendanceSelf = async (req, res) => {
     try {
         const { qrToken } = req.body;
-        const studentId = req.user._id;
-
+        const studentId = req.user.id || req.user._id;
         const eventId = qrToken.split('-')[0];
-        const event = await Event.findById(eventId);
 
-        if (!event) return res.status(404).json({ message: 'Invalid QR Code' });
-        if (!event.qrActive) return res.status(400).json({ message: 'QR Code is not active' });
-        if (new Date() > event.qrExpiresAt) return res.status(400).json({ message: 'QR Code expired' });
-        if (event.qrCode !== qrToken) return res.status(400).json({ message: 'Invalid QR Token' });
+        const event = await db.transaction(async trx => {
+            const ev = await trx('events').where({ id: eventId }).first();
 
-        const registration = await Registration.findOne({ student: studentId, event: eventId });
-        if (!registration) return res.status(404).json({ message: 'Not registered for this event' });
-        if (registration.status === 'attended' || registration.status === 'verified') return res.status(400).json({ message: 'Already verified' });
+            if (!ev) throw new Error('Invalid QR Code');
+            if (!ev.qrActive) throw new Error('QR Code is not active');
+            if (new Date() > new Date(ev.qrExpiresAt)) throw new Error('QR Code expired');
+            if (ev.qrCode !== qrToken) throw new Error('Invalid QR Token');
 
-        registration.status = 'verified';
-        registration.attendedAt = Date.now();
-        registration.verifiedBy = studentId; // Self verified
-        await registration.save();
+            const registration = await trx('registrations').where({ student_id: studentId, event_id: eventId }).first();
+            if (!registration) throw new Error('Not registered for this event');
+            if (registration.status === 'attended' || registration.status === 'verified') throw new Error('Already verified');
 
-        const student = await User.findById(studentId);
-        student.credits += event.points;
-        await student.save();
+            await trx('registrations').where({ id: registration.id }).update({
+                status: 'verified',
+                attendedAt: trx.fn.now(),
+                verifiedBy: studentId // Self verified
+            });
 
-        await logActivity('VERIFY_SELF', studentId, registration._id, 'Registration', { event: event.title }, req);
+            await trx('users').where({ id: studentId }).increment('credits', ev.points);
+
+            return ev;
+        });
+
+        // We assume we have the event context to log
+        const registration = await db('registrations').where({ student_id: studentId, event_id: eventId }).first();
+        await logActivity('VERIFY_SELF', studentId, registration.id.toString(), 'Registration', { event: event.title }, req);
 
         res.json({ message: 'Attendance verified successfully', credits: event.points });
     } catch (error) {
+        if (['Invalid QR Code', 'Not registered for this event'].includes(error.message)) {
+            return res.status(404).json({ message: error.message });
+        } else if (['QR Code is not active', 'QR Code expired', 'Invalid QR Token', 'Already verified'].includes(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ message: 'Verification failed', error: error.message });
     }
 };
@@ -143,11 +191,44 @@ const verifyAttendanceSelf = async (req, res) => {
 // @access  Private (Student)
 const getMyRegistrations = async (req, res) => {
     try {
-        const registrations = await Registration.find({ student: req.user._id })
-            .populate('event', 'title date venue points status')
-            .sort({ createdAt: -1 });
+        const studentId = req.user.id || req.user._id;
+
+        const rows = await db('registrations')
+            .join('events', 'registrations.event_id', '=', 'events.id')
+            .where('registrations.student_id', studentId)
+            .select(
+                'registrations.id as r_id',
+                'registrations.status as r_status',
+                'registrations.attendedAt as r_attendedAt',
+                'registrations.created_at as r_created_at',
+                'events.id as e_id',
+                'events.title as e_title',
+                'events.date as e_date',
+                'events.venue as e_venue',
+                'events.points as e_points',
+                'events.status as e_status'
+            )
+            .orderBy('registrations.created_at', 'desc');
+
+        const registrations = rows.map(row => ({
+            _id: row.r_id,
+            id: row.r_id,
+            status: row.r_status,
+            attendedAt: row.r_attendedAt,
+            createdAt: row.r_created_at,
+            event: {
+                _id: row.e_id,
+                title: row.e_title,
+                date: row.e_date,
+                venue: row.e_venue,
+                points: row.e_points,
+                status: row.e_status
+            }
+        }));
+
         res.json(registrations);
     } catch (error) {
+        console.error('getMyRegistrations error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -163,12 +244,38 @@ const getEventRegistrations = async (req, res) => {
             return res.status(400).json({ message: 'Event ID is required' });
         }
 
-        const registrations = await Registration.find({ event: eventId })
-            .populate('student', 'name email usn')
-            .sort({ createdAt: -1 });
+        const rows = await db('registrations')
+            .join('users', 'registrations.student_id', '=', 'users.id')
+            .where('registrations.event_id', eventId)
+            .select(
+                'registrations.id as r_id',
+                'registrations.status as r_status',
+                'registrations.attendedAt as r_attendedAt',
+                'registrations.created_at as r_created_at',
+                'users.id as u_id',
+                'users.name as u_name',
+                'users.email as u_email',
+                'users.usn as u_usn'
+            )
+            .orderBy('registrations.created_at', 'desc');
+
+        const registrations = rows.map(row => ({
+            _id: row.r_id,
+            id: row.r_id,
+            status: row.r_status,
+            attendedAt: row.r_attendedAt,
+            createdAt: row.r_created_at,
+            student: {
+                _id: row.u_id,
+                name: row.u_name,
+                email: row.u_email,
+                usn: row.u_usn
+            }
+        }));
 
         res.json(registrations);
     } catch (error) {
+        console.error('getEventRegistrations error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };

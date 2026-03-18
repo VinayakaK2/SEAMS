@@ -1,33 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const { loginUser, registerUser, forgotPassword, resetPassword, verifyEmail } = require('../controllers/authController');
+const { loginLimiter, registerLimiter, forgotPasswordLimiter } = require('../middleware/limiter');
 
-router.post('/register', registerUser);
-router.post('/login', loginUser);
-router.post('/forgotpassword', forgotPassword);
+router.post('/register', registerLimiter, registerUser);
+router.post('/login', loginLimiter, loginUser);
+router.post('/forgotpassword', forgotPasswordLimiter, forgotPassword);
 router.put('/resetpassword/:resetToken', resetPassword);
 router.get('/verifyemail/:verificationToken', verifyEmail);
+
 
 // Temporary setup endpoint - DELETE after creating admin
 router.get('/setup-admin', async (req, res) => {
     try {
-        const User = require('../models/User');
+        const db = require('../db');
         const bcrypt = require('bcryptjs');
 
         // Check if admin exists
-        const existingAdmin = await User.findOne({ email: 'admin@seams.edu' });
+        const existingAdmin = await db('users').where({ email: 'admin@seams.edu' }).first();
         if (existingAdmin) {
             return res.json({ message: 'Admin already exists!', email: 'admin@seams.edu' });
         }
 
-        // Create admin
+        // Create admin with securely hashed password
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash('admin123', salt);
+        const password_hash = await bcrypt.hash('admin123', salt);
 
-        const admin = new User({
+        await db('users').insert({
             name: 'System Administrator',
             email: 'admin@seams.edu',
-            password: hashedPassword,
+            password_hash,
             role: 'admin',
             isEmailVerified: true,
             usn: 'ADMIN001',
@@ -35,16 +37,10 @@ router.get('/setup-admin', async (req, res) => {
             semester: 'N/A'
         });
 
-        await admin.save();
-
         res.json({
             success: true,
-            message: 'Admin created successfully!',
-            credentials: {
-                email: 'admin@seams.edu',
-                password: 'admin123'
-            },
-            warning: 'Please change password after login and DELETE this endpoint!'
+            message: 'Admin created successfully! Please change password after login and DELETE this endpoint.',
+            email: 'admin@seams.edu'
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

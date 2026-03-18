@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const db = require('../db');
 
 const protect = async (req, res, next) => {
     let token;
@@ -11,12 +11,17 @@ const protect = async (req, res, next) => {
         try {
             token = req.headers.authorization.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = await User.findById(decoded._id).select('-password');
+            const userId = decoded.id || decoded._id;
+            const fullUser = await db('users').where({ id: userId }).first();
 
-            if (!req.user) {
-                console.error('Auth Error: User not found for token ID:', decoded._id);
+            if (!fullUser) {
+                console.error('Auth Error: User not found for token ID:', userId);
                 return res.status(401).json({ message: 'Not authorized, user not found' });
             }
+
+            // Strip sensitive fields — password_hash must never be on req.user
+            const { password_hash, emailVerificationToken, emailVerificationExpire, resetPasswordToken, resetPasswordExpire, ...safeUser } = fullUser;
+            req.user = safeUser;
 
             next();
         } catch (error) {

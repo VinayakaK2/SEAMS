@@ -38,18 +38,18 @@ const CreditsRules = () => {
     return (
         <AdminLayout user={user} title="Credits Rules">
             <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900">Credit Configuration</h2>
-                <p className="text-gray-500">Manage the credit points assigned to different event categories.</p>
+                <h2 className="text-2xl font-bold text-white">Credit Configuration</h2>
+                <p className="text-gray-400">Manage the credit points assigned to different event categories.</p>
             </div>
 
             {/* Summary Card */}
-            <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl mb-8 flex items-start gap-4">
-                <div className="bg-blue-100 p-3 rounded-xl">
-                    <AlertCircle className="w-6 h-6 text-blue-600" />
+            <div className="bg-indigo-500/10 border border-indigo-500/20 p-6 rounded-2xl mb-8 flex items-start gap-4">
+                <div className="bg-indigo-500/20 p-3 rounded-xl">
+                    <AlertCircle className="w-6 h-6 text-indigo-400" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-bold text-blue-900">Total Credit Calculation</h3>
-                    <p className="text-blue-700 mt-1 text-sm">
+                    <h3 className="text-lg font-bold text-indigo-300">Total Credit Calculation</h3>
+                    <p className="text-indigo-400 mt-1 text-sm">
                         Students earn credits based on the category of events they participate in.
                         Changes made here will apply to all future event participations.
                         Past records will remain unchanged.
@@ -58,37 +58,37 @@ const CreditsRules = () => {
             </div>
 
             {/* Credits Table */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="glass-card overflow-hidden border border-white/10">
                 <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-white/5 border-b border-white/10">
                         <tr>
-                            <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Category Name</th>
-                            <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Description</th>
-                            <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Credits per Event</th>
-                            <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Action</th>
+                            <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">Category Name</th>
+                            <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">Description</th>
+                            <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">Credits per Event</th>
+                            <th className="text-right py-4 px-6 text-sm font-semibold text-gray-300">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {categories.map((category) => (
-                            <tr key={category.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                            <tr key={category.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                 <td className="py-4 px-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
+                                        <div className="w-10 h-10 bg-indigo-500/20 border border-indigo-500/30 rounded-lg flex items-center justify-center text-indigo-400">
                                             <Award className="w-5 h-5" />
                                         </div>
-                                        <span className="font-bold text-gray-900">{category.name}</span>
+                                        <span className="font-bold text-white">{category.name}</span>
                                     </div>
                                 </td>
-                                <td className="py-4 px-6 text-sm text-gray-600">{category.description}</td>
+                                <td className="py-4 px-6 text-sm text-gray-400">{category.description}</td>
                                 <td className="py-4 px-6">
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-50 text-green-700 border border-green-100">
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                                         {category.credits} Points
                                     </span>
                                 </td>
                                 <td className="py-4 px-6 text-right">
                                     <button
                                         onClick={() => handleEditClick(category)}
-                                        className="text-gray-400 hover:text-blue-600 transition-colors p-2 hover:bg-blue-50 rounded-lg"
+                                        className="text-gray-400 hover:text-indigo-400 transition-colors p-2 hover:bg-white/10 rounded-lg"
                                     >
                                         <Edit2 className="w-5 h-5" />
                                     </button>
@@ -102,43 +102,43 @@ const CreditsRules = () => {
             {/* Edit Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-gray-900">Edit Credits</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                    <div className="glass-card shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-white/10">
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                            <h3 className="text-lg font-bold text-white">Edit Credits</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                                <label className="block text-sm font-semibold text-gray-300 mb-2">Category</label>
                                 <input
                                     type="text"
                                     value={selectedCategory?.name}
                                     disabled
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500"
+                                    className="w-full px-4 py-3 input-dark opacity-70 cursor-not-allowed"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Credits Points</label>
+                                <label className="block text-sm font-semibold text-gray-300 mb-2">Credits Points</label>
                                 <input
                                     type="number"
                                     value={editValue}
                                     onChange={(e) => setEditValue(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-900"
+                                    className="w-full px-4 py-3 input-dark font-bold text-white focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>
                         </div>
-                        <div className="p-6 bg-gray-50 flex justify-end gap-3">
+                        <div className="p-6 bg-white/5 border-t border-white/10 flex justify-end gap-3">
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg transition-colors"
+                                className="px-4 py-2 text-gray-300 font-medium hover:bg-white/10 rounded-lg transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-400 hover:to-purple-500 transition-colors flex items-center gap-2 shadow-glow"
                             >
                                 <Save className="w-4 h-4" /> Save Changes
                             </button>
@@ -149,11 +149,11 @@ const CreditsRules = () => {
 
             {/* Toast Notification */}
             {showToast && (
-                <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-300">
-                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                        <CheckSquare className="w-3 h-3 text-white" />
+                <div className="fixed bottom-6 right-6 bg-gray-900 border border-white/10 text-white px-6 py-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-300 z-[60]">
+                    <div className="w-6 h-6 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center">
+                        <AlertCircle className="w-3 h-3 text-emerald-400" />
                     </div>
-                    <span className="font-medium">Credits updated successfully!</span>
+                    <span className="font-medium text-emerald-50">Credits updated successfully!</span>
                 </div>
             )}
         </AdminLayout>

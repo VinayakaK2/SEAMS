@@ -177,71 +177,74 @@ const ManageEvents = () => {
     return (
         <CoordinatorLayout user={user} title="Manage Events">
             {/* Filters */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-8">
+            <div className="glass-card rounded-3xl p-6 mb-8">
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
                     <div className="relative w-full md:w-96">
-                        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Search events..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="input-dark pl-12 pr-4 py-3 w-full text-sm"
                         />
                     </div>
                     <div className="flex gap-4 w-full md:w-auto">
                         <select
                             value={selectedCategory}
                             onChange={(e) => setSelectedCategory(e.target.value)}
-                            className="px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            className="input-dark px-4 py-3 w-full md:w-48 text-sm appearance-none bg-[#1a2235]"
                         >
-                            <option value="All">All Categories</option>
-                            <option value="Technical">Technical</option>
-                            <option value="Cultural">Cultural</option>
-                            <option value="Sports">Sports</option>
-                            <option value="NSS">NSS</option>
+                            <option value="All" className="bg-[#1a2235]">All Categories</option>
+                            <option value="Technical" className="bg-[#1a2235]">Technical</option>
+                            <option value="Cultural" className="bg-[#1a2235]">Cultural</option>
+                            <option value="Sports" className="bg-[#1a2235]">Sports</option>
+                            <option value="NSS" className="bg-[#1a2235]">NSS</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             {/* Events Table */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="glass-card rounded-3xl overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-100">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-white/5 border-b border-white/10">
                             <tr>
-                                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Event Name</th>
-                                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Category</th>
-                                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Date</th>
-                                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">Registered</th>
-                                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
-                                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">View</th>
-                                <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Actions</th>
+                                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-300">Event Name</th>
+                                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-300">Category</th>
+                                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-300">Date</th>
+                                <th className="text-center py-4 px-6 text-sm font-semibold text-slate-300">Registered</th>
+                                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-300">Status</th>
+                                <th className="text-center py-4 px-6 text-sm font-semibold text-slate-300">View</th>
+                                <th className="text-right py-4 px-6 text-sm font-semibold text-slate-300">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-white/5">
                             {filteredEvents.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="py-12 text-center text-gray-500">
+                                    <td colSpan="7" className="py-12 text-center text-slate-400">
                                         No events found
                                     </td>
                                 </tr>
                             ) : (
                                 filteredEvents.map((event) => (
-                                    <tr key={event._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 px-6 font-medium text-gray-900">{event.title}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-600">{event.category}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-600">{new Date(event.date).toLocaleDateString()}</td>
+                                    <tr key={event._id} className="hover:bg-white/5 transition-colors">
+                                        <td className="py-4 px-6 font-medium text-white">{event.title}</td>
+                                        <td className="py-4 px-6 text-sm text-slate-400">{event.category}</td>
+                                        <td className="py-4 px-6 text-sm text-slate-400 flex items-center gap-2">
+                                            <Calendar className="w-4 h-4 text-indigo-400" />
+                                            {new Date(event.date).toLocaleDateString()}
+                                        </td>
                                         <td className="py-4 px-6 text-center">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                                                 {event.registeredCount || 0}
                                             </span>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${event.status === 'approved' ? 'bg-green-50 text-green-700 border border-green-100' :
-                                                event.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
-                                                    'bg-gray-50 text-gray-700 border border-gray-100'
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${event.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                event.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                    'bg-slate-500/10 text-slate-400 border-slate-500/20'
                                                 }`}>
                                                 {event.status}
                                             </span>
@@ -249,7 +252,7 @@ const ManageEvents = () => {
                                         <td className="py-4 px-6 text-center">
                                             <button
                                                 onClick={() => handleViewEvent(event)}
-                                                className="p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors inline-flex items-center gap-1"
+                                                className="p-2 text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-400 rounded-xl transition-colors inline-flex items-center justify-center border border-transparent hover:border-indigo-500/30"
                                                 title="View Details"
                                             >
                                                 <Eye className="w-4 h-4" />
@@ -259,21 +262,21 @@ const ManageEvents = () => {
                                             <div className="flex justify-end gap-2">
                                                 <button
                                                     onClick={() => handleEditEvent(event)}
-                                                    className="p-2 text-gray-500 hover:bg-green-50 hover:text-green-600 rounded-lg transition-colors"
+                                                    className="p-2 text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400 rounded-xl transition-colors border border-transparent hover:border-emerald-500/30"
                                                     title="Edit Event"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleShowQR(event)}
-                                                    className="p-2 text-gray-500 hover:bg-purple-50 hover:text-purple-600 rounded-lg transition-colors"
+                                                    className="p-2 text-slate-400 hover:bg-purple-500/10 hover:text-purple-400 rounded-xl transition-colors border border-transparent hover:border-purple-500/30"
                                                     title="Generate QR Code"
                                                 >
                                                     <QrCode className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteEvent(event._id)}
-                                                    className="p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+                                                    className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 rounded-xl transition-colors border border-transparent hover:border-rose-500/30"
                                                     title="Delete Event"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -290,80 +293,82 @@ const ManageEvents = () => {
 
             {/* View Modal */}
             {showViewModal && selectedEvent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowViewModal(false)}>
-                    <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all" onClick={() => setShowViewModal(false)}>
+                    <div className="glass-card rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-start mb-6">
-                            <h3 className="text-2xl font-bold text-gray-900">{selectedEvent.title}</h3>
-                            <button onClick={() => setShowViewModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                            <h3 className="text-2xl font-bold text-white">{selectedEvent.title}</h3>
+                            <button onClick={() => setShowViewModal(false)} className="p-2 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div>
-                                <label className="text-sm font-semibold text-gray-500">Description</label>
-                                <p className="text-gray-900 mt-1">{selectedEvent.description}</p>
+                                <label className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Description</label>
+                                <p className="text-slate-300 mt-2 leading-relaxed">{selectedEvent.description}</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-6 bg-white/5 p-4 rounded-2xl border border-white/10">
                                 <div>
-                                    <label className="text-sm font-semibold text-gray-500 flex items-center gap-1">
-                                        <Calendar className="w-4 h-4" /> Date
+                                    <label className="text-sm font-semibold text-slate-400 flex items-center gap-2 mb-1">
+                                        <Calendar className="w-4 h-4 text-indigo-400" /> Date
                                     </label>
-                                    <p className="text-gray-900 mt-1">{new Date(selectedEvent.date).toLocaleDateString()}</p>
+                                    <p className="text-white font-medium">{new Date(selectedEvent.date).toLocaleDateString()}</p>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-semibold text-gray-500">Time</label>
-                                    <p className="text-gray-900 mt-1">{selectedEvent.time || selectedEvent.startTime || 'N/A'}</p>
+                                    <label className="text-sm font-semibold text-slate-400 flex items-center gap-2 mb-1">
+                                         <Calendar className="w-4 h-4 text-indigo-400 opacity-0" /> Time
+                                    </label>
+                                    <p className="text-white font-medium">{selectedEvent.time || selectedEvent.startTime || 'N/A'}</p>
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="text-sm font-semibold text-gray-500 flex items-center gap-1">
-                                    <MapPin className="w-4 h-4" /> Venue
+                            <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                                <label className="text-sm font-semibold text-slate-400 flex items-center gap-2 mb-1">
+                                    <MapPin className="w-4 h-4 text-rose-400" /> Venue
                                 </label>
-                                <p className="text-gray-900 mt-1">{selectedEvent.venue}</p>
+                                <p className="text-white font-medium">{selectedEvent.venue}</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-6">
                                 <div>
-                                    <label className="text-sm font-semibold text-gray-500">Category</label>
-                                    <p className="text-gray-900 mt-1">{selectedEvent.category}</p>
+                                    <label className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Category</label>
+                                    <p className="text-white mt-1 font-medium">{selectedEvent.category}</p>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-semibold text-gray-500 flex items-center gap-1">
-                                        <Award className="w-4 h-4" /> Points
+                                    <label className="text-sm font-semibold text-slate-400 flex items-center gap-2 uppercase tracking-wider">
+                                        <Award className="w-4 h-4 text-amber-400" /> Points
                                     </label>
-                                    <p className="text-gray-900 mt-1">{selectedEvent.points}</p>
+                                    <p className="text-amber-400 mt-1 font-bold text-lg">{selectedEvent.points}</p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-6">
                                 <div>
-                                    <label className="text-sm font-semibold text-gray-500 flex items-center gap-1">
-                                        <Users className="w-4 h-4" /> Max Participants
+                                    <label className="text-sm font-semibold text-slate-400 flex items-center gap-2 uppercase tracking-wider">
+                                        <Users className="w-4 h-4 text-indigo-400" /> Max Participants
                                     </label>
-                                    <p className="text-gray-900 mt-1">{selectedEvent.maxParticipants || 'Unlimited'}</p>
+                                    <p className="text-white mt-1 font-medium">{selectedEvent.maxParticipants || 'Unlimited'}</p>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-semibold text-gray-500">Registered</label>
-                                    <p className="text-gray-900 mt-1">{selectedEvent.registeredCount || 0}</p>
+                                    <label className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Registered</label>
+                                    <p className="text-indigo-400 mt-1 font-bold text-lg">{selectedEvent.registeredCount || 0}</p>
                                 </div>
                             </div>
 
                             {selectedEvent.coordinators && selectedEvent.coordinators.length > 0 && (
                                 <div>
-                                    <label className="text-sm font-semibold text-gray-500 mb-2 block">Event Coordinators</label>
-                                    <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3 block">Event Coordinators</label>
+                                    <div className="space-y-3">
                                         {selectedEvent.coordinators.map((coord, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                                <User className="w-4 h-4 text-gray-400" />
-                                                <span className="text-gray-900">{coord.name}</span>
+                                            <div key={idx} className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
+                                                <User className="w-5 h-5 text-indigo-400" />
+                                                <span className="text-white font-medium">{coord.name}</span>
                                                 {coord.phone && (
                                                     <>
-                                                        <span className="text-gray-300">|</span>
-                                                        <Phone className="w-4 h-4 text-gray-400" />
-                                                        <span className="text-gray-600">{coord.phone}</span>
+                                                        <span className="text-slate-600">|</span>
+                                                        <Phone className="w-4 h-4 text-indigo-400" />
+                                                        <span className="text-slate-300">{coord.phone}</span>
                                                     </>
                                                 )}
                                             </div>
@@ -373,10 +378,10 @@ const ManageEvents = () => {
                             )}
 
                             <div>
-                                <label className="text-sm font-semibold text-gray-500">Status</label>
-                                <p className={`mt-1 inline-block px-3 py-1 rounded-full text-sm font-medium ${selectedEvent.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                    selectedEvent.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                        'bg-gray-100 text-gray-700'
+                                <label className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Status</label>
+                                <p className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${selectedEvent.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                    selectedEvent.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                        'bg-slate-500/10 text-slate-400 border-slate-500/20'
                                     }`}>
                                     {selectedEvent.status}
                                 </p>
@@ -385,9 +390,9 @@ const ManageEvents = () => {
 
                         <button
                             onClick={() => setShowViewModal(false)}
-                            className="w-full mt-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                            className="w-full mt-8 py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-colors border border-white/10"
                         >
-                            Close
+                            Close Details
                         </button>
                     </div>
                 </div>
@@ -395,136 +400,143 @@ const ManageEvents = () => {
 
             {/* Edit Modal */}
             {showEditModal && selectedEvent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowEditModal(false)}>
-                    <div className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-start mb-6">
-                            <h3 className="text-2xl font-bold text-gray-900">Edit Event</h3>
-                            <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEditModal(false)}>
+                    <div className="glass-card rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-8">
+                            <div>
+                              <h3 className="text-2xl font-bold text-white mb-1">Edit Event</h3>
+                              <p className="text-slate-400 text-sm">Update the details for {selectedEvent.title}</p>
+                            </div>
+                            <button onClick={() => setShowEditModal(false)} className="p-2 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         <form onSubmit={handleUpdateEvent} className="space-y-6">
                             <div>
-                                <label className="block mb-2 text-sm font-semibold text-gray-700">Event Title *</label>
+                                <label className="block mb-2 text-sm font-semibold text-slate-300">Event Title *</label>
                                 <input
                                     name="title"
                                     value={editFormData.title}
                                     onChange={handleEditChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-dark w-full"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block mb-2 text-sm font-semibold text-gray-700">Description *</label>
+                                <label className="block mb-2 text-sm font-semibold text-slate-300">Description *</label>
                                 <textarea
                                     name="description"
                                     value={editFormData.description}
                                     onChange={handleEditChange}
                                     rows="4"
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-dark w-full resize-none"
                                     required
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block mb-2 text-sm font-semibold text-gray-700">Start Date *</label>
+                                    <label className="block mb-2 text-sm font-semibold text-slate-300">Start Date *</label>
                                     <input
                                         type="date"
                                         name="startDate"
                                         value={editFormData.startDate}
                                         onChange={handleEditChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="input-dark w-full"
                                         required
+                                        style={{ colorScheme: 'dark' }}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block mb-2 text-sm font-semibold text-gray-700">Start Time *</label>
+                                    <label className="block mb-2 text-sm font-semibold text-slate-300">Start Time *</label>
                                     <input
                                         type="time"
                                         name="startTime"
                                         value={editFormData.startTime}
                                         onChange={handleEditChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="input-dark w-full"
                                         required
+                                        style={{ colorScheme: 'dark' }}
                                     />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block mb-2 text-sm font-semibold text-gray-700">End Date</label>
+                                    <label className="block mb-2 text-sm font-semibold text-slate-300">End Date</label>
                                     <input
                                         type="date"
                                         name="endDate"
                                         value={editFormData.endDate}
                                         onChange={handleEditChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="input-dark w-full"
+                                        style={{ colorScheme: 'dark' }}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block mb-2 text-sm font-semibold text-gray-700">End Time</label>
+                                    <label className="block mb-2 text-sm font-semibold text-slate-300">End Time</label>
                                     <input
                                         type="time"
                                         name="endTime"
                                         value={editFormData.endTime}
                                         onChange={handleEditChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="input-dark w-full"
+                                        style={{ colorScheme: 'dark' }}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block mb-2 text-sm font-semibold text-gray-700">Venue *</label>
+                                <label className="block mb-2 text-sm font-semibold text-slate-300">Venue *</label>
                                 <input
                                     name="venue"
                                     value={editFormData.venue}
                                     onChange={handleEditChange}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="input-dark w-full"
                                     required
                                 />
                             </div>
 
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block mb-2 text-sm font-semibold text-gray-700">Category *</label>
+                                    <label className="block mb-2 text-sm font-semibold text-slate-300">Category *</label>
                                     <select
                                         name="category"
                                         value={editFormData.category}
                                         onChange={handleEditChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                        className="input-dark w-full appearance-none pr-10"
                                     >
-                                        <option value="Technical">Technical</option>
-                                        <option value="Cultural">Cultural</option>
-                                        <option value="Sports">Sports</option>
-                                        <option value="NSS">NSS</option>
-                                        <option value="Entrepreneurship">Entrepreneurship</option>
-                                        <option value="Placement">Placement</option>
-                                        <option value="Life Skills">Life Skills</option>
+                                        <option value="Technical" className="bg-[#1a2235]">Technical</option>
+                                        <option value="Cultural" className="bg-[#1a2235]">Cultural</option>
+                                        <option value="Sports" className="bg-[#1a2235]">Sports</option>
+                                        <option value="NSS" className="bg-[#1a2235]">NSS</option>
+                                        <option value="Entrepreneurship" className="bg-[#1a2235]">Entrepreneurship</option>
+                                        <option value="Placement" className="bg-[#1a2235]">Placement</option>
+                                        <option value="Life Skills" className="bg-[#1a2235]">Life Skills</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block mb-2 text-sm font-semibold text-gray-700">Points *</label>
+                                    <label className="block mb-2 text-sm font-semibold text-slate-300">Points *</label>
                                     <input
                                         type="number"
                                         name="points"
                                         value={editFormData.points}
                                         onChange={handleEditChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="input-dark w-full"
                                         min="0"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label className="block mb-2 text-sm font-semibold text-gray-700">Max Participants</label>
+                                    <label className="block mb-2 text-sm font-semibold text-slate-300">Max Participants</label>
                                     <input
                                         type="number"
                                         name="maxParticipants"
                                         value={editFormData.maxParticipants}
                                         onChange={handleEditChange}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="input-dark w-full"
                                         min="0"
                                     />
                                 </div>
@@ -533,11 +545,11 @@ const ManageEvents = () => {
                             {/* Event Coordinators */}
                             <div>
                                 <div className="flex justify-between items-center mb-3">
-                                    <label className="text-sm font-semibold text-gray-700">Event Coordinators</label>
+                                    <label className="text-sm font-semibold text-slate-300">Event Coordinators</label>
                                     <button
                                         type="button"
                                         onClick={addCoordinator}
-                                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg"
+                                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors border border-transparent hover:border-indigo-500/30"
                                     >
                                         <Plus className="w-4 h-4" />
                                         Add
@@ -545,20 +557,20 @@ const ManageEvents = () => {
                                 </div>
                                 <div className="space-y-3">
                                     {editCoordinators.map((coordinator, index) => (
-                                        <div key={index} className="flex gap-3 items-start p-4 bg-gray-50 rounded-xl">
+                                        <div key={index} className="flex gap-3 items-start p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-colors">
                                             <div className="flex-1 grid grid-cols-2 gap-3">
                                                 <input
                                                     type="text"
                                                     value={coordinator.name}
                                                     onChange={(e) => handleCoordinatorChange(index, 'name', e.target.value)}
-                                                    className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                    className="input-dark w-full py-2 text-sm"
                                                     placeholder="Name"
                                                 />
                                                 <input
                                                     type="tel"
                                                     value={coordinator.phone}
                                                     onChange={(e) => handleCoordinatorChange(index, 'phone', e.target.value)}
-                                                    className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                    className="input-dark w-full py-2 text-sm"
                                                     placeholder="Phone"
                                                 />
                                             </div>
@@ -566,7 +578,7 @@ const ManageEvents = () => {
                                                 <button
                                                     type="button"
                                                     onClick={() => removeCoordinator(index)}
-                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                                    className="mt-1 p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-transparent hover:border-rose-500/30"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
@@ -576,19 +588,19 @@ const ManageEvents = () => {
                                 </div>
                             </div>
 
-                            <div className="flex gap-3">
-                                <button
-                                    type="submit"
-                                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
-                                >
-                                    Update Event
-                                </button>
+                            <div className="flex gap-4 pt-4 border-t border-white/10">
                                 <button
                                     type="button"
                                     onClick={() => setShowEditModal(false)}
-                                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                    className="flex-1 px-6 py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-colors border border-white/10"
                                 >
                                     Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 btn-primary"
+                                >
+                                    Update Event
                                 </button>
                             </div>
                         </form>
@@ -598,18 +610,19 @@ const ManageEvents = () => {
 
             {/* QR Modal */}
             {showQRModal && selectedQR && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowQRModal(false)}>
-                    <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{selectedQR.title}</h3>
-                        <p className="text-gray-500 text-sm mb-6">Scan to mark attendance</p>
-                        <div className="bg-white p-4 border border-gray-100 rounded-xl inline-block mb-6">
-                            <QRCodeSVG value={selectedQR.value} size={200} level="H" />
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all" onClick={() => setShowQRModal(false)}>
+                    <div className="glass-card rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden group shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-50"></div>
+                        <h3 className="text-xl font-bold text-white mb-2 relative z-10">{selectedQR.title}</h3>
+                        <p className="text-slate-400 text-sm mb-6 relative z-10">Scan to mark attendance</p>
+                        <div className="bg-white p-4 rounded-xl inline-block mb-8 relative z-10 shadow-lg ring-4 ring-white/5">
+                            <QRCodeSVG value={selectedQR.value} size={200} level="H" includeMargin={true} />
                         </div>
                         <button
                             onClick={() => setShowQRModal(false)}
-                            className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                            className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-colors border border-white/10 relative z-10"
                         >
-                            Close
+                            Close QR Code
                         </button>
                     </div>
                 </div>

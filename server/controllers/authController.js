@@ -1,12 +1,13 @@
-const User = require('../models/User');
+const db = require('../db');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const sendEmail = require('../utils/sendEmail');
 
 const generateToken = (user) => {
     return jwt.sign(
         {
-            _id: user._id,
+            id: user.id,
             name: user.name,
             email: user.email,
             role: user.role,
@@ -26,28 +27,40 @@ const generateToken = (user) => {
 // @access  Public
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
-    const normalizedEmail = email.toLowerCase();
 
-    const user = await User.findOne({ email: normalizedEmail });
+    // Input validation
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
 
-    if (user && (await user.matchPassword(password))) {
-        // Check if email is verified
-        if (!user.isEmailVerified) {
-            return res.status(401).json({ message: 'Please verify your email before logging in' });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+        const user = await db('users').where({ email: normalizedEmail }).first();
+
+        if (user && (await bcrypt.compare(password, user.password_hash))) {
+            // Check if email is verified
+            if (!user.isEmailVerified) {
+                return res.status(401).json({ message: 'Please verify your email before logging in' });
+            }
+
+            res.json({
+                _id: user.id,
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                usn: user.usn,
+                branch: user.branch,
+                semester: user.semester,
+                token: generateToken(user),
+            });
+        } else {
+            res.status(401).json({ message: 'Invalid email or password' });
         }
-
-        res.json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            usn: user.usn,
-            branch: user.branch,
-            semester: user.semester,
-            token: generateToken(user),
-        });
-    } else {
-        res.status(401).json({ message: 'Invalid email or password' });
+    } catch (error) {
+        console.error('Login Error:', error);
+        res.status(500).json({ message: 'Server error during login' });
     }
 };
 
@@ -56,66 +69,91 @@ const loginUser = async (req, res) => {
 // @access  Public
 const registerUser = async (req, res) => {
     const { name, email, password, role, usn, branch, semester, department, phone } = req.body;
-    const normalizedEmail = email.toLowerCase();
 
-    const userExists = await User.findOne({ email: normalizedEmail });
-
-    if (userExists) {
-        return res.status(400).json({ message: 'User already exists' });
+    // Input validation
+    if (!name || !email || !password) {
+        return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+    if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+    const allowedRoles = ['student', 'coordinator', 'faculty', 'admin'];
+    if (role && !allowedRoles.includes(role)) {
+        return res.status(400).json({ message: 'Invalid role specified' });
     }
 
-    // Generate email verification token
-    const verificationToken = crypto.randomBytes(20).toString('hex');
-    const hashedToken = crypto
-        .createHash('sha256')
-        .update(verificationToken)
-        .digest('hex');
+    const normalizedEmail = email.toLowerCase().trim();
 
-    const user = await User.create({
-        name,
-        email: normalizedEmail,
-        password,
-        role: role || 'student',
-        usn,
-        branch,
-        semester,
-        department,
-        phone,
-        isEmailVerified: false,
-        emailVerificationToken: hashedToken,
-        emailVerificationExpire: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-    });
+    try {
+        const userExists = await db('users').where({ email: normalizedEmail }).first();
 
-    if (user) {
-        // Create verification URL
-        const verificationUrl = `http://localhost:5173/verify-email/${verificationToken}`;
-
-        const message = `Welcome to SEAMS! Please verify your email by clicking on the following link:\n\n${verificationUrl}\n\nThis link will expire in 24 hours.`;
-
-        console.log('----------------------------------------------------');
-        console.log('EMAIL VERIFICATION LINK (Copy this if email fails):');
-        console.log(verificationUrl);
-        console.log('User Email:', user.email);
-        console.log('----------------------------------------------------');
-
-        try {
-            await sendEmail({
-                email: user.email,
-                subject: 'SEAMS - Email Verification',
-                message,
-            });
-
-            res.status(201).json({
-                success: true,
-                message: 'Registration successful! Please check your email to verify your account.',
-            });
-        } catch (err) {
-            // If email fails, delete the user
-            await User.findByIdAndDelete(user._id);
-            return res.status(500).json({ message: 'Could not send verification email. Please try again.' });
+        if (userExists) {
+            return res.status(400).json({ message: 'User already exists' });
         }
-    } else {
-        res.status(400).json({ message: 'Invalid user data' });
+
+        // Generate email verification token
+        const verificationToken = crypto.randomBytes(20).toString('hex');
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(verificationToken)
+            .digest('hex');
+
+        // Hash password securely
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(password, salt);
+
+        const emailVerificationExpire = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        const [newUser] = await db('users').insert({
+            name,
+            email: normalizedEmail,
+            password_hash,
+            role: role || 'student',
+            usn,
+            branch,
+            semester,
+            department,
+            phone,
+            isEmailVerified: false,
+            emailVerificationToken: hashedToken,
+            emailVerificationExpire: emailVerificationExpire,
+        }).returning('*');
+
+        if (newUser) {
+            // Create verification URL
+            const verificationUrl = `http://localhost:5173/verify-email/${verificationToken}`;
+
+            const message = `Welcome to SEAMS! Please verify your email by clicking on the following link:\n\n${verificationUrl}\n\nThis link will expire in 24 hours.`;
+
+            console.log('----------------------------------------------------');
+            console.log('EMAIL VERIFICATION LINK (Copy this if email fails):');
+            console.log(verificationUrl);
+            console.log('User Email:', newUser.email);
+            console.log('----------------------------------------------------');
+
+            try {
+                await sendEmail({
+                    email: newUser.email,
+                    subject: 'SEAMS - Email Verification',
+                    message,
+                });
+
+                res.status(201).json({
+                    success: true,
+                    message: 'Registration successful! Please check your email to verify your account.',
+                });
+            } catch (err) {
+                // If email fails, delete the user
+                await db('users').where({ id: newUser.id }).del();
+                console.error('Email send error:', err);
+                return res.status(500).json({ message: 'Could not send verification email. Please try again.' });
+            }
+        } else {
+            res.status(400).json({ message: 'Invalid user data' });
+        }
+    } catch (error) {
+        console.error('Registration Error:', error);
+        res.status(500).json({ message: 'Registration server error' });
     }
 };
 
@@ -127,12 +165,16 @@ const forgotPassword = async (req, res) => {
     console.log('Forgot Password Request for:', email);
 
     try {
-        // Find user by email OR USN
-        // Normalize email if it looks like an email
         const isEmail = email.includes('@');
-        const query = isEmail ? { email: email.toLowerCase() } : { usn: email };
+        let query;
 
-        const user = await User.findOne(query);
+        if (isEmail) {
+            query = db('users').where({ email: email.toLowerCase() });
+        } else {
+            query = db('users').where({ usn: email });
+        }
+
+        const user = await query.first();
         console.log('User found:', user ? user.email : 'No user');
 
         if (!user) {
@@ -147,17 +189,20 @@ const forgotPassword = async (req, res) => {
         const resetToken = crypto.randomBytes(20).toString('hex');
 
         // Hash token and set to resetPasswordToken field
-        user.resetPasswordToken = crypto
+        const resetPasswordToken = crypto
             .createHash('sha256')
             .update(resetToken)
             .digest('hex');
 
         // Set expire
-        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+        const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
         console.log('About to save user with reset token...');
         try {
-            await user.save();
+            await db('users').where({ id: user.id }).update({
+                resetPasswordToken,
+                resetPasswordExpire
+            });
             console.log('User saved successfully with reset token');
         } catch (saveError) {
             console.error('Error saving user:', saveError);
@@ -184,10 +229,10 @@ const forgotPassword = async (req, res) => {
             res.status(200).json({ success: true, data: 'Email sent' });
         } catch (err) {
             console.log(err);
-            user.resetPasswordToken = undefined;
-            user.resetPasswordExpire = undefined;
-
-            await user.save();
+            await db('users').where({ id: user.id }).update({
+                resetPasswordToken: null,
+                resetPasswordExpire: null
+            });
 
             return res.status(500).json({ message: 'Email could not be sent. Check server console for the link.' });
         }
@@ -215,22 +260,25 @@ const resetPassword = async (req, res) => {
         console.log('Reset Password Request. Token:', req.params.resetToken);
         console.log('Hashed Token:', resetPasswordToken);
 
-        const user = await User.findOne({
-            resetPasswordToken,
-            resetPasswordExpire: { $gt: Date.now() },
-        });
+        const user = await db('users')
+            .where({ resetPasswordToken })
+            .andWhere('resetPasswordExpire', '>', new Date())
+            .first();
 
         if (!user) {
             console.log('Invalid token or token expired');
             return res.status(400).json({ message: 'Invalid token' });
         }
 
-        // Set new password
-        user.password = req.body.password;
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpire = undefined;
+        // Hash new password securely and save
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(req.body.password, salt);
 
-        await user.save();
+        await db('users').where({ id: user.id }).update({
+            password_hash,
+            resetPasswordToken: null,
+            resetPasswordExpire: null
+        });
 
         res.status(200).json({ success: true, data: 'Password updated' });
     } catch (error) {
@@ -250,21 +298,21 @@ const verifyEmail = async (req, res) => {
             .update(req.params.verificationToken)
             .digest('hex');
 
-        const user = await User.findOne({
-            emailVerificationToken,
-            emailVerificationExpire: { $gt: Date.now() },
-        });
+        const user = await db('users')
+            .where({ emailVerificationToken })
+            .andWhere('emailVerificationExpire', '>', new Date())
+            .first();
 
         if (!user) {
             return res.status(400).json({ message: 'Invalid or expired verification token' });
         }
 
         // Verify the email
-        user.isEmailVerified = true;
-        user.emailVerificationToken = undefined;
-        user.emailVerificationExpire = undefined;
-
-        await user.save();
+        await db('users').where({ id: user.id }).update({
+            isEmailVerified: true,
+            emailVerificationToken: null,
+            emailVerificationExpire: null
+        });
 
         res.status(200).json({ success: true, message: 'Email verified successfully! You can now login.' });
     } catch (error) {

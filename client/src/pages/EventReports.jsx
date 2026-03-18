@@ -126,13 +126,13 @@ const EventReports = ({ embedded = false }) => {
     const content = (
         <>
             {/* Event Selector */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Generate Report</h3>
+            <div className="glass-card p-8 mb-8 border border-white/10">
+                <h3 className="text-lg font-bold text-white mb-4">Generate Report</h3>
                 <div className="flex gap-4">
                     <select
                         value={selectedEvent}
                         onChange={(e) => setSelectedEvent(e.target.value)}
-                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        className="flex-1 px-4 py-3 input-dark border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white [&>option]:text-black"
                     >
                         <option value="">Select an event...</option>
                         {events.map(event => (
@@ -142,7 +142,7 @@ const EventReports = ({ embedded = false }) => {
                     <button
                         onClick={generateReport}
                         disabled={!selectedEvent}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-400 hover:to-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-glow"
                     >
                         Generate Report
                     </button>
@@ -154,60 +154,66 @@ const EventReports = ({ embedded = false }) => {
                 <>
                     {/* Summary Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-                        <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+                        <div className="bg-blue-500/10 rounded-2xl p-6 border border-blue-500/20">
                             <div className="flex items-center justify-between mb-2">
-                                <Users className="w-6 h-6 text-blue-600" />
+                                <Users className="w-6 h-6 text-blue-400" />
                             </div>
-                            <h3 className="text-2xl font-bold text-blue-900">{reportData.stats.totalRegistered}</h3>
-                            <p className="text-sm font-medium text-blue-700 mt-1">Registered</p>
+                            <h3 className="text-2xl font-bold text-blue-400">{reportData.stats.totalRegistered}</h3>
+                            <p className="text-sm font-medium text-blue-300 mt-1">Registered</p>
                         </div>
-                        <div className="bg-purple-50 rounded-2xl p-6 border border-purple-100">
+                        <div className="bg-purple-500/10 rounded-2xl p-6 border border-purple-500/20">
                             <div className="flex items-center justify-between mb-2">
-                                <CheckCircle className="w-6 h-6 text-purple-600" />
+                                <CheckCircle className="w-6 h-6 text-purple-400" />
                             </div>
-                            <h3 className="text-2xl font-bold text-purple-900">{reportData.stats.attended}</h3>
-                            <p className="text-sm font-medium text-purple-700 mt-1">Attended</p>
+                            <h3 className="text-2xl font-bold text-purple-400">{reportData.stats.attended}</h3>
+                            <p className="text-sm font-medium text-purple-300 mt-1">Attended</p>
                         </div>
-                        <div className="bg-green-50 rounded-2xl p-6 border border-green-100">
+                        <div className="bg-emerald-500/10 rounded-2xl p-6 border border-emerald-500/20">
                             <div className="flex items-center justify-between mb-2">
-                                <CheckCircle className="w-6 h-6 text-green-600" />
+                                <CheckCircle className="w-6 h-6 text-emerald-400" />
                             </div>
-                            <h3 className="text-2xl font-bold text-green-900">{reportData.stats.approved}</h3>
-                            <p className="text-sm font-medium text-green-700 mt-1">Approved</p>
+                            <h3 className="text-2xl font-bold text-emerald-400">{reportData.stats.approved}</h3>
+                            <p className="text-sm font-medium text-emerald-300 mt-1">Approved</p>
                         </div>
-                        <div className="bg-red-50 rounded-2xl p-6 border border-red-100">
+                        <div className="bg-red-500/10 rounded-2xl p-6 border border-red-500/20">
                             <div className="flex items-center justify-between mb-2">
-                                <XCircle className="w-6 h-6 text-red-600" />
+                                <XCircle className="w-6 h-6 text-red-400" />
                             </div>
-                            <h3 className="text-2xl font-bold text-red-900">{reportData.stats.rejected}</h3>
-                            <p className="text-sm font-medium text-red-700 mt-1">Rejected</p>
+                            <h3 className="text-2xl font-bold text-red-400">{reportData.stats.rejected}</h3>
+                            <p className="text-sm font-medium text-red-300 mt-1">Rejected</p>
                         </div>
-                        <div className="bg-yellow-50 rounded-2xl p-6 border border-yellow-100">
+                        <div className="bg-yellow-500/10 rounded-2xl p-6 border border-yellow-500/20">
                             <div className="flex items-center justify-between mb-2">
-                                <Clock className="w-6 h-6 text-yellow-600" />
+                                <Clock className="w-6 h-6 text-yellow-400" />
                             </div>
-                            <h3 className="text-2xl font-bold text-yellow-900">{reportData.stats.pending}</h3>
-                            <p className="text-sm font-medium text-yellow-700 mt-1">Pending</p>
+                            <h3 className="text-2xl font-bold text-yellow-400">{reportData.stats.pending}</h3>
+                            <p className="text-sm font-medium text-yellow-300 mt-1">Pending</p>
                         </div>
                     </div>
 
                     {/* Analytics Graph */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-8">
+                    <div className="glass-card border border-white/10 p-6 mb-8">
                         <div className="flex items-center gap-2 mb-6">
-                            <TrendingUp className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-lg font-bold text-gray-900">Participation Analytics</h3>
+                            <TrendingUp className="w-5 h-5 text-indigo-400" />
+                            <h3 className="text-lg font-bold text-white">Participation Analytics</h3>
                         </div>
                         <div className="h-64 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={reportData.analytics}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+                                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
                                     <Tooltip
-                                        cursor={{ fill: '#F3F4F6' }}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                        contentStyle={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.9)', color: '#fff' }}
                                     />
-                                    <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={40} />
+                                    <Bar dataKey="count" fill="url(#colorCount)" radius={[4, 4, 0, 0]} barSize={40} />
+                                    <defs>
+                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#8B5CF6" />
+                                            <stop offset="100%" stopColor="#4F46E5" />
+                                        </linearGradient>
+                                    </defs>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -217,14 +223,14 @@ const EventReports = ({ embedded = false }) => {
                     <div className="flex gap-4 mb-8">
                         <button
                             onClick={downloadCSV}
-                            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors"
+                            className="flex items-center gap-2 px-6 py-3 bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 rounded-xl font-medium hover:bg-emerald-500/30 hover:text-white transition-colors"
                         >
                             <Download className="w-5 h-5" />
                             Download CSV
                         </button>
                         <button
                             onClick={downloadPDF}
-                            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors"
+                            className="flex items-center gap-2 px-6 py-3 bg-red-500/20 text-red-300 border border-red-500/50 rounded-xl font-medium hover:bg-red-500/30 hover:text-white transition-colors"
                         >
                             <FileText className="w-5 h-5" />
                             Download PDF
@@ -232,36 +238,36 @@ const EventReports = ({ embedded = false }) => {
                     </div>
 
                     {/* Participants Table */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="p-6 border-b border-gray-100">
-                            <h3 className="text-lg font-bold text-gray-900">Participants</h3>
+                    <div className="glass-card border border-white/10 overflow-hidden">
+                        <div className="p-6 border-b border-white/10">
+                            <h3 className="text-lg font-bold text-white">Participants</h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-50">
+                                <thead className="bg-white/5 border-b border-white/10">
                                     <tr>
-                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Name</th>
-                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">USN</th>
-                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Registered At</th>
-                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
-                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Scan Time</th>
+                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">Name</th>
+                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">USN</th>
+                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">Registered At</th>
+                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">Status</th>
+                                        <th className="text-left py-4 px-6 text-sm font-semibold text-gray-300">Scan Time</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {reportData.participants.map((participant, index) => (
-                                        <tr key={index} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                            <td className="py-4 px-6 text-sm font-medium text-gray-900">{participant.name}</td>
-                                            <td className="py-4 px-6 text-sm text-gray-600">{participant.usn}</td>
-                                            <td className="py-4 px-6 text-sm text-gray-400">{participant.registeredAt}</td>
+                                        <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                            <td className="py-4 px-6 text-sm font-medium text-white">{participant.name}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-400">{participant.usn}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-500">{participant.registeredAt}</td>
                                             <td className="py-4 px-6">
-                                                <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${participant.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                                                    participant.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                                                        'bg-yellow-100 text-yellow-700'
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium border ${participant.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                                                    participant.status === 'Rejected' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
+                                                        'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
                                                     }`}>
                                                     {participant.status}
                                                 </span>
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-gray-400">{participant.scanTime}</td>
+                                            <td className="py-4 px-6 text-sm text-gray-500">{participant.scanTime}</td>
                                         </tr>
                                     ))}
                                 </tbody>
