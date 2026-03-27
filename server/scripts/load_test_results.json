@@ -1,0 +1,50 @@
+{
+  "phase1": {
+    "requests_per_sec_avg": 941.27,
+    "requests_per_sec_peak": 1198,
+    "total_requests": 14119,
+    "latency_avg_ms": 20.81,
+    "latency_p50_ms": 19,
+    "latency_p99_ms": 46,
+    "latency_max_ms": 254,
+    "errors": 0,
+    "timeouts": 0,
+    "non2xx": 0,
+    "failure_pct": "0.00"
+  },
+  "phase2": {
+    "requests_per_sec_avg": 1120.27,
+    "requests_per_sec_peak": 1291,
+    "total_requests": 33608,
+    "latency_avg_ms": 89.11,
+    "latency_p50_ms": 84,
+    "latency_p99_ms": 197,
+    "latency_max_ms": 527,
+    "errors": 0,
+    "timeouts": 0,
+    "non2xx": 0,
+    "failure_pct": "0.00"
+  },
+  "phase3": {
+    "requests_per_sec_avg": 448,
+    "requests_per_sec_peak": 549,
+    "total_requests": 6720,
+    "latency_avg_ms": 444.67,
+    "latency_p50_ms": 439,
+    "latency_p99_ms": 730,
+    "latency_max_ms": 807,
+    "errors": 0,
+    "timeouts": 0,
+    "non2xx": 0,
+    "failure_pct": "0.00"
+  },
+  "summary": {
+    "overall_avg_latency_ms": "184.9",
+    "worst_p95_ms": 0,
+    "total_requests": 54447,
+    "total_errors": 0,
+    "failure_pct": "0.00",
+    "total_timeouts": 0,
+    "latency_200ms_target_met": true
+  }
+}

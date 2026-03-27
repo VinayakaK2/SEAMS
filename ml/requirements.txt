@@ -2,4 +2,14 @@ flask
 scikit-learn
 pandas
 python-dotenv
+redis
+flask
 flask-cors
+sentence-transformers
+numpy
+lightgbm
+joblib
+pg8000
+faiss-cpu
+pika
+prometheus_client

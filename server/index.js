@@ -5,7 +5,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const db = require('./db');
-const { requestContext } = require('./middleware/metrics');
+const { requestContext, promClient } = require('./middleware/metrics');
 const { generalLimiter } = require('./middleware/limiter');
 
 dotenv.config();
@@ -99,6 +99,59 @@ app.get('/health/db', async (req, res) => {
     } catch (err) {
         res.status(503).json({ status: 'error', db: 'unreachable', error: err.message });
     }
+});
+
+// V12 Readiness Probe for container orchestration (Kubernetes) checks full stack
+app.get('/ready', async (req, res) => {
+    const checks = { db: false, redis: false, ml: false, vector: false };
+    
+    // DB Check
+    try {
+        await db.raw('SELECT 1');
+        checks.db = true;
+    } catch(e) {}
+    
+    // Redis Check
+    try {
+        const redisClient = require('./utils/redisClient');
+        await redisClient.ping();
+        checks.redis = true;
+    } catch(e) {}
+
+    // ML Verification
+    try {
+        const axios = require('axios');
+        const mlUrl = process.env.ML_SERVICE_URL || 'http://127.0.0.1:5001';
+        // Check ML cluster availability natively
+        await axios.get(`${mlUrl}/health`, { timeout: 1500 });
+        checks.ml = true; // Flag true if we successfully reached without hanging
+    } catch(e) {
+        if (e.response && e.response.status === 200) checks.ml = true;
+        // else ignore (leaves false)
+    }
+
+    // Vector Verification
+    try {
+        const axios = require('axios');
+        const vectorUrl = process.env.VECTOR_SERVICE_URL || 'http://127.0.0.1:5002';
+        await axios.get(`${vectorUrl}/health`, { timeout: 1500 });
+        checks.vector = true;
+    } catch (e) {
+        if (e.response && e.response.status === 200) checks.vector = true;
+    }
+
+    const isReady = Object.values(checks).every(Boolean);
+    res.status(isReady ? 200 : 503).json({ 
+        status: isReady ? 'ready' : 'degraded', 
+        checks,
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Prometheus metrics endpoint exposing all instrumented app metrics
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await promClient.register.metrics());
 });
 
 // Routes

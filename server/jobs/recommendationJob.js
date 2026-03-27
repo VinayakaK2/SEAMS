@@ -1,36 +1,77 @@
 const cron = require('node-cron');
 const { exec } = require('child_process');
 const path = require('path');
+const axios = require('axios');
 const db = require('../db');
-const { getRecommendations } = require('../services/recommendationService');
+const Redis = require('ioredis');
+const { getRecommendations, refreshCandidatePool } = require('../services/recommendationService');
 
-// Run every hour to precompute recommendations for active users
-cron.schedule('0 * * * *', async () => {
-    console.log('[Background Job] Starting V3 Recommendation Precomputation...');
+// Shared HA Redis client for background jobs
+const jobRedis = require('../utils/redisClient');
+
+// ── Job 1: Refresh global candidate pool every 3 minutes ──────────────────
+cron.schedule('*/3 * * * *', async () => {
+    console.log('[POOL REFRESH] Refreshing global candidate pool...');
     try {
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        
-        const activeUsersResult = await db('users')
-            .select('id')
-            .where('last_active_at', '>', sevenDaysAgo);
-            
-        const activeUserIds = activeUsersResult.map(row => row.id);
-        
-        console.log(`[Background Job] Found ${activeUserIds.length} active users to precompute.`);
+        await refreshCandidatePool();
+        console.log('[POOL REFRESH] Done.');
+    } catch (err) {
+        console.error('[POOL REFRESH] Failed:', err.message);
+    }
+});
+
+// ── Job 2: Precompute feeds for active users every 5 minutes ───────────────
+cron.schedule('*/5 * * * *', async () => {
+    console.log('[PRECOMPUTE] Starting feed precomputation for active users...');
+    try {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const activeUsersResult = await db('user_activity')
+            .distinct('user_id')
+            .where('timestamp', '>', oneDayAgo)
+            .limit(50); // Top 50 most active users
+
+        const activeUserIds = activeUsersResult.map(row => row.user_id);
+        console.log(`[PRECOMPUTE] Found ${activeUserIds.length} active users to precompute.`);
 
         let successCount = 0;
         for (const userId of activeUserIds) {
             try {
-                await getRecommendations(userId, 1, 10);
-                successCount++;
+                const result = await getRecommendations(userId, 1, 10);
+                // Store the precomputed result
+                try {
+                    await jobRedis.set(
+                        `recommendations:precomputed:${userId}`,
+                        JSON.stringify(result),
+                        'EX', 600 // 10 min TTL
+                    );
+                    successCount++;
+                } catch(e) { /* Redis down — skip writing precomputed */ }
             } catch (err) {
-                console.error(`[Background Job] Error precomputing for user ${userId}:`, err.message);
+                console.error(`[PRECOMPUTE] Error for user ${userId}:`, err.message);
             }
         }
-        
-        console.log(`[Background Job] Precomputation complete! Successfully cached for ${successCount}/${activeUserIds.length} users.`);
+        console.log(`[PRECOMPUTE] Done — precomputed feeds for ${successCount}/${activeUserIds.length} users.`);
     } catch (error) {
-        console.error('[Background Job] Failed to execute precomputation:', error);
+        console.error('[PRECOMPUTE] Failed:', error.message);
+    }
+});
+
+// ── Job 3 (legacy): Hourly full precompute fallback ──────────────────────────
+cron.schedule('0 * * * *', async () => {
+    console.log('[Background Job] Starting hourly recommendation precompute (fallback)...');
+    try {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const activeUsersResult = await db('users')
+            .select('id')
+            .where('last_active_at', '>', sevenDaysAgo);
+        const activeUserIds = activeUsersResult.map(row => row.id);
+        let successCount = 0;
+        for (const userId of activeUserIds) {
+            try { await getRecommendations(userId, 1, 10); successCount++; } catch (err) {}
+        }
+        console.log(`[Background Job] Hourly precompute done: ${successCount}/${activeUserIds.length} users.`);
+    } catch (error) {
+        console.error('[Background Job] Hourly precompute failed:', error);
     }
 });
 
@@ -121,4 +162,59 @@ cron.schedule('0 2 * * *', () => {
         }
         console.log(`[Background Job] V6 ML Model Retraining Output:\n${stdout}`);
     });
+});
+
+// ── Job 5 (V9): Daily embedding backfill — 3:00 AM ─────────────────────────
+// Processes all approved events without an embedding in small batches.
+cron.schedule('0 3 * * *', async () => {
+    console.log('[EMBED JOB] Starting V9 event embedding backfill...');
+    const mlUrl = process.env.ML_SERVICE_URL || 'http://127.0.0.1:5001';
+    try {
+        const events = await db('events')
+            .select('id', 'title', 'description', 'tags')
+            .where('status', 'approved')
+            .whereNull('embedding')
+            .orderBy('id', 'asc')
+            .limit(200); // Safety cap per run
+
+        if (events.length === 0) {
+            console.log('[EMBED JOB] No events missing embeddings. Done.');
+            return;
+        }
+        console.log(`[EMBED JOB] Found ${events.length} events to embed.`);
+
+        const BATCH_SIZE = 10;
+        let success = 0, failed = 0;
+
+        for (let i = 0; i < events.length; i += BATCH_SIZE) {
+            const batch = events.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(async (ev) => {
+                try {
+                    let tags = [];
+                    try { tags = Array.isArray(ev.tags) ? ev.tags : JSON.parse(ev.tags || '[]'); } catch (e) {}
+                    const resp = await axios.post(`${mlUrl}/ml/embed/event`, {
+                        title:       ev.title       || '',
+                        description: ev.description || '',
+                        tags,
+                    }, { timeout: 15000 });
+                    if (resp.data?.status === 'success' && resp.data.embedding) {
+                        await db('events').where({ id: ev.id }).update({
+                            embedding: JSON.stringify(resp.data.embedding)
+                        });
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch (err) {
+                    console.warn(`[EMBED JOB] Failed for event ${ev.id}: ${err.message}`);
+                    failed++;
+                }
+            }));
+            // Polite delay between batches
+            if (i + BATCH_SIZE < events.length) await new Promise(r => setTimeout(r, 50));
+        }
+        console.log(`[EMBED JOB] Done. success=${success}, failed=${failed}`);
+    } catch (err) {
+        console.error('[EMBED JOB] Fatal error:', err.message);
+    }
 });

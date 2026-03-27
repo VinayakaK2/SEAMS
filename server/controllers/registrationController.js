@@ -1,6 +1,9 @@
 const db = require('../db');
 const logActivity = require('../utils/logger');
 const { updateUserTagProfile } = require('../utils/tagProfileUpdater');
+const rabbitmq = require('../utils/rabbitmq');
+
+const redis = require('../utils/redisClient');
 
 /**
  * Record user activity for recommendation engine
@@ -17,6 +20,23 @@ const recordActivity = async (userId, eventId, action) => {
 
         // V3: Incrementally update user's semantic learning profile
         await updateUserTagProfile(userId, eventId, action);
+        
+        // V11 Feature Store: Propagate stats explicitly
+        try {
+            const userKey = `user:features:${userId}`;
+            await redis.hincrby(userKey, 'interactionsCount', 1);
+            if (action === 'click' || action === 'like' || action === 'register') {
+                await redis.hincrby(userKey, 'logStats_clicked', 1);
+            }
+            await redis.expire(userKey, 1800); // ensure TTL is held
+            
+            // Queue real-time EMA embedding learning persistently via RabbitMQ
+            if (action === 'click' || action === 'like' || action === 'register') {
+                await rabbitmq.publishToQueue('queue:user_embed_update', { userId, eventId, action });
+            }
+        } catch (e) {
+            console.warn(`[REDIS] Feature Store realtime increment failed: ${e.message}`);
+        }
         
     } catch (error) {
         console.error('recordActivity error:', error.message);

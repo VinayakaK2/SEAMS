@@ -9,7 +9,7 @@
  *   const { getCache, setCache, delCache, delCachePattern } = require('./cache');
  *   const data = await getCache('key') || await db.query...
  */
-const Redis = require('ioredis');
+// Replaced raw ioredis with HA Centralized
 
 const REDIS_ENABLED = process.env.REDIS_URL || process.env.REDIS_HOST;
 

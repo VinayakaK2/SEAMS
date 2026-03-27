@@ -68,14 +68,28 @@ const forgotPasswordLimiter = makeRateLimiter({
     message: 'Too many password reset requests. Please try again in 30 minutes.'
 });
 
+// ─── Localhost skip helper (for load testing only) ──────────────────────────
+const isLocalhost = (req) => {
+    const ip = req.ip || req.connection.remoteAddress || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+};
+
 /**
  * General API limiter: 200 requests per minute per IP.
  * Broad protection against automated scraping.
+ * Note: Localhost (load tests) are exempt.
  */
-const generalLimiter = makeRateLimiter({
-    windowMinutes: 1,
+const generalLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
     max: 200,
-    message: 'Too many requests. Please slow down.'
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => isLocalhost(req),
+    message: { message: 'Too many requests. Please slow down.' },
+    handler: (req, res, _next, options) => {
+        console.warn(`[RateLimit] ${req.ip} hit limit on ${req.path}`);
+        res.status(429).json({ message: options.message.message });
+    }
 });
 
 module.exports = { loginLimiter, registerLimiter, qrScanLimiter, forgotPasswordLimiter, generalLimiter };

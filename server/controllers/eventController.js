@@ -1,10 +1,28 @@
 const db = require('../db');
+const axios = require('axios');
 const QRCode = require('qrcode');
 const logActivity = require('../utils/logger');
-const { updateUserTagProfile } = require('../utils/tagProfileUpdater');
+const { patchCandidatePool } = require('../services/recommendationService');
+const rabbitmq = require('../utils/rabbitmq');
 
-// ML Tagging Service URL (internal)
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:5001/ml/generate-tags';
+const redis = require('../utils/redisClient');
+
+// ML Service base URL (internal)
+const ML_BASE_URL = process.env.ML_SERVICE_URL || 'http://127.0.0.1:5001';
+
+/**
+ * V11: Enqueues a background job to generate and persist an event embedding.
+ * Called after event creation and after title/description/tag updates.
+ */
+const triggerEventEmbedding = async (event) => {
+    if (!event || !event.id) return;
+    try {
+        await rabbitmq.publishToQueue('queue:embedding_jobs', { id: event.id });
+        console.log(`[RABBITMQ] Published durable embedding job for event ${event.id}`);
+    } catch (err) {
+        console.warn(`[QUEUE] Failed to dispatch embedding job for event ${event.id}: ${err.message}`);
+    }
+};
 
 /**
  * Record user activity for recommendation engine
@@ -37,6 +55,24 @@ const recordActivity = async (userId, eventId, action) => {
 
         // V3: Incrementally update user's semantic learning profile
         await updateUserTagProfile(userId, eventId, action);
+        
+        // V11 Feature Store: Propagate stats explicitly
+        try {
+            const userKey = `user:features:${userId}`;
+            await redis.hincrby(userKey, 'interactionsCount', 1);
+            if (action === 'view' || action === 'like' || action === 'register' || action === 'impression') {
+                await redis.hincrby(userKey, 'logStats_clicked', action === 'impression' ? 0 : 1);
+                if (action === 'impression') await redis.hincrby(userKey, 'logStats_shown', 1);
+            }
+            await redis.expire(userKey, 1800);
+            
+            // V12 Durable RabbitMQ fallback real-time EMA embeddings map
+            if (action === 'view' || action === 'like' || action === 'register') {
+                await rabbitmq.publishToQueue('queue:user_embed_update', { userId, eventId, action });
+            }
+        } catch (e) {
+            console.warn(`[REDIS] Feature Store realtime increment failed: ${e.message}`);
+        }
         
     } catch (error) {
         console.error('recordActivity error:', error.message);
@@ -104,6 +140,12 @@ const createEvent = async (req, res) => {
         }
 
         res.status(201).json(createdEvent);
+        // Patch candidate pool asynchronously (fire-and-forget)
+        if (createdEvent.status === 'approved') {
+            patchCandidatePool('add', createdEvent).catch(() => {});
+        }
+        // V9: Generate and store event embedding (fire-and-forget)
+        triggerEventEmbedding(createdEvent);
     } catch (error) {
         console.error('createEvent error:', error);
         res.status(400).json({ message: 'Invalid event data', error: error.message });
@@ -360,6 +402,10 @@ const updateEvent = async (req, res) => {
         }
 
         res.json(updatedEvent);
+        // V9: Re-generate embedding if content-bearing fields changed (fire-and-forget)
+        if (updateData.title || updateData.description) {
+            triggerEventEmbedding(updatedEvent);
+        }
     } catch (error) {
         console.error('updateEvent error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -398,6 +444,13 @@ const deleteEvent = async (req, res) => {
         }
 
         res.json({ message: 'Event deleted successfully' });
+        
+        // V11: Remove directly from Distributed FAISS Vector Service (fire-and-forget)
+        const vectorUrl = process.env.VECTOR_SERVICE_URL || `http://127.0.0.1:${process.env.VECTOR_PORT || 5002}`;
+        axios.post(`${vectorUrl}/vector/remove`, { id: event.id }, { timeout: 3000 }).catch(err => {
+            console.warn(`[VECTOR] Failed to remove event ${event.id} from Sharded FAISS: ${err.message}`);
+        });
+
     } catch (error) {
         console.error('deleteEvent error:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
